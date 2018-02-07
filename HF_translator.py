@@ -41,7 +41,7 @@ class HF(object):
         self.out_table = np.zeros((self.n_events,self.sensors.shape[0]),dtype='int32')
         low_limit = 0
 
-        for i in range(0,self.n_events-1):
+        for i in range(0,self.n_events):
             high_limit = self.extents[i,1]
             event_wave = self.waves[low_limit:high_limit+1,:]
 
@@ -49,6 +49,9 @@ class HF(object):
                 condition   = (event_wave[:,0]==self.sensors[j])
                 sensor_data = np.sum(event_wave[condition,2])
                 self.out_table[i,j] = sensor_data
+
+            low_limit = high_limit+1
+            print ("EVENT %d processed" % i)
 
 
 def main():

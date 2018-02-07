@@ -28,15 +28,18 @@ class HF(object):
         self.sensors = sensors_t[:,0]
 
     def write(self):
-        # with pd.HDFStore(self.out_file,
-        #                 complevel=9,
-        #                 complib='bzip2') as store:
-        #     panel_array = pd.DataFrame( data=self.out_table,
-        #                                 columns=self.sensors)
-        #     store.put('run',panel_array,format='table')
-        #     store.close()
-        panel_array = pd.DataFrame( data=self.out_table,columns=self.sensors)
-        panel_array.to_hdf(self.out_file,'table')
+        with pd.HDFStore(self.out_file) as store:
+            panel_array = pd.DataFrame( data=self.out_table,
+                                        columns=self.sensors)
+            # complevel and complib are not compatible with MATLAB
+            store.put('run',panel_array)
+            store.close()
+        # panel_array = pd.DataFrame( data=self.out_table,columns=self.sensors)
+        # panel_array.to_hdf( self.out_file,
+        #                     key = 'charge',
+        #                     format ='fixed',
+        #                     complevel = 9,
+        #                     complib = 'bzip2')
 
 
     def process(self):

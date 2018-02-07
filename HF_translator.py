@@ -28,13 +28,15 @@ class HF(object):
         self.sensors = sensors_t[:,0]
 
     def write(self):
-        with pd.HDFStore(self.out_file,
-                        complevel=9,
-                        complib='bzip2') as store:
-            panel_array = pd.DataFrame( data=self.out_table,
-                                        columns=self.sensors)
-            store.put('run',panel_array)
-            store.close()
+        # with pd.HDFStore(self.out_file,
+        #                 complevel=9,
+        #                 complib='bzip2') as store:
+        #     panel_array = pd.DataFrame( data=self.out_table,
+        #                                 columns=self.sensors)
+        #     store.put('run',panel_array,format='table')
+        #     store.close()
+        panel_array = pd.DataFrame( data=self.out_table,columns=self.sensors)
+        panel_array.to_hdf(self.out_file,'table')
 
 
     def process(self):

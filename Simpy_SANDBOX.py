@@ -1,4 +1,6 @@
 import simpy
+from simpy.events import AnyOf, AllOf, Event
+
 
 def clock(env,name,tick):
     while True:
@@ -46,8 +48,7 @@ class driver(object):
         yield self.env.timeout(self.driver_dur)
         self.car.charge_ends.succeed()
 
-
-if __name__ == "__main__":
+def main_car_driver():
     env = simpy.Environment()
 
     CAR = car(env,charge_dur=10,trip_dur=3)
@@ -56,3 +57,7 @@ if __name__ == "__main__":
     env.process(DRIVER.driver_i())
 
     env.run(until=50)
+
+
+
+if __name__ == "__main__":

@@ -20,19 +20,21 @@ class car(object):
         self.action = env.process(self.run())
         self.charge_dur = charge_dur
         self.trip_dur = trip_dur
+        self.charge_ends = self.env.event()
 
     def run(self):
         while True:
             print("Start driving at %d" % self.env.now)
             yield self.env.timeout(self.trip_dur)
+
             print("Start parking and charging at %d" % self.env.now)
-            try:
-                yield self.env.process(self.charge())
-            except simpy.Interrupt:
-                print("Charge Interrupted")
+            yield self.env.process(self.charge())
 
     def charge(self):
-        yield self.env.timeout(self.charge_dur)
+        yield self.env.timeout(self.charge_dur) | self.charge_ends
+        # Waits for complete charge or driver interrupt
+        if self.charge_ends.triggered:
+            self.charge_ends = self.env.event()
 
 class driver(object):
     def __init__(self,env,driver_dur,car):
@@ -42,15 +44,15 @@ class driver(object):
 
     def driver_i(self):
         yield self.env.timeout(self.driver_dur)
-        self.car.action.interrupt()
+        self.car.charge_ends.succeed()
 
 
 if __name__ == "__main__":
     env = simpy.Environment()
 
     CAR = car(env,charge_dur=10,trip_dur=3)
-    DRIVER = driver(env,driver_dur=4,car=CAR)
+    DRIVER = driver(env,driver_dur=6,car=CAR)
 
     env.process(DRIVER.driver_i())
 
-    env.run(until=25)
+    env.run(until=50)

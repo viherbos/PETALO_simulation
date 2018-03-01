@@ -19,6 +19,7 @@ def print_stats(env,res):
 
 def consumer(env, resource):
     yield env.timeout(random.randint(1,10))
+    
     print_stats(env,resource)
 
     try:

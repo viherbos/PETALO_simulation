@@ -61,3 +61,4 @@ def main_car_driver():
 
 
 if __name__ == "__main__":
+    main_clock()

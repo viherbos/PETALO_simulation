@@ -82,7 +82,7 @@ class consumer(object):
 
 if __name__ == '__main__':
 
-    iterations = 500
+    iterations = 250
 
     lost_vector1=np.zeros(iterations)
     lost_vector2=np.zeros(iterations)
@@ -94,12 +94,12 @@ if __name__ == '__main__':
         env = simpy.Environment()
         data_out=[]
         C = consumer(env,
-                    delay=5,
-                    FIFO_size=2,
+                    delay=30,
+                    FIFO_size=4,
                     data_out=data_out)
 
         P = [producer(env,
-                     max_delay=2,
+                     max_delay=6000,
                      message = message1) for i in range(64)]
 
         for i in range(64):
@@ -109,7 +109,8 @@ if __name__ == '__main__':
         env.run()
         lost_vector1[j] = P[0].lost
         lost_vector2[j] = P[1].lost
-        
+        print (" ITERATION %d" % j)
+
 #         print ("\n ------------------------ \n \
 # Total Lost Events %d from P1 \n ------------------------" % P[0].lost)
 #

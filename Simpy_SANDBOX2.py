@@ -20,7 +20,7 @@ class Full(Exception):
 
 class producer(object):
 
-    def __init__(self,env,max_delay,FIFO_size,message):
+    def __init__(self,env,max_delay,message):
         self.env = env
         self.out = None
         # Connection with receptor
@@ -28,7 +28,6 @@ class producer(object):
         self.counter = 0
         self.data=message
         self.max_delay = max_delay
-        self.max_FIFO = FIFO_size
         self.lost = 0
 
     def run(self):
@@ -37,27 +36,22 @@ class producer(object):
             #print_stats(env,self.out.res)
 
             try:
-                if (len(self.out.res.items)<self.max_FIFO):
-                    self.out.put(self.data[self.counter])
-                    self.counter += 1
-                else:
-                    self.counter += 1
-                    raise Full('FIFO is FULL')
-                    # Drop data. FIFO is FULL so data is lost
+                self.lost = self.out.put(self.data[self.counter],self.lost)
+                self.counter += 1
+                # Drop data. FIFO is FULL so data is lost
             except IndexError:
                 print "List Empty"
-            except Full as e:
-                print ("TIME: %s // %s" % (self.env.now,e.value))
-                self.lost += 1
+
 
 
 
 
 class consumer(object):
 
-    def __init__(self,env,delay,data_out):
+    def __init__(self,env,delay,FIFO_size,data_out):
         self.env = env
-        self.res = simpy.Store(self.env,capacity=2)
+        self.FIFO_size = FIFO_size
+        self.res = simpy.Store(self.env,capacity=self.FIFO_size)
         self.action = env.process(self.run())
         self.data_out = data_out
         self.delay = delay
@@ -66,9 +60,17 @@ class consumer(object):
     def print_stats(self):
         print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
 
-    def put(self,data):
-        self.res.put(data)
-        self.print_stats()
+    def put(self,data,lost):
+        try:
+            if (len(self.res.items)<self.FIFO_size):
+                self.res.put(data)
+                return lost
+            else:
+                raise Full('FIFO is FULL')
+        except Full as e:
+            #print ("TIME: %s // %s" % (self.env.now,e.value))
+            return (lost+1)
+        # self.print_stats()
 
     def run(self):
         while True:
@@ -80,52 +82,53 @@ class consumer(object):
 
 if __name__ == '__main__':
 
-    lost_vector1=np.zeros(1000)
-    lost_vector2=np.zeros(1000)
+    iterations = 500
 
-    for i in range(1000):
+    lost_vector1=np.zeros(iterations)
+    lost_vector2=np.zeros(iterations)
+
+
+    for j in range(iterations):
         message1 = np.random.randint(1,10,size=100)
         message2 = np.random.randint(1,10,size=100)
         env = simpy.Environment()
         data_out=[]
         C = consumer(env,
                     delay=5,
+                    FIFO_size=2,
                     data_out=data_out)
 
-        P1 = producer(env,
-                    max_delay=2,
-                    FIFO_size=2,
-                    message = message1)
+        P = [producer(env,
+                     max_delay=2,
+                     message = message1) for i in range(64)]
 
-        P2 = producer(env,
-                    max_delay=2,
-                    FIFO_size=2,
-                    message = message1)
+        for i in range(64):
+            P[i].out = C
 
-        P1.out = C
-        P2.out = C
 
         env.run()
-        print ("\n -------------------- \n \
-Total Lost Events %d \n --------------------" % P1.lost)
-        lost_vector1[i] = P1.lost
+        lost_vector1[j] = P[0].lost
+        lost_vector2[j] = P[1].lost
+        
+#         print ("\n ------------------------ \n \
+# Total Lost Events %d from P1 \n ------------------------" % P[0].lost)
+#
+#         print ("\n ------------------------ \n \
+# Total Lost Events %d from P2\n ------------------------" % P[1].lost)
 
-        print ("\n -------------------- \n \
-Total Lost Events %d \n --------------------" % P2.lost)
-        lost_vector2[i] = P2.lost
 
     fit = fit_library.gauss_fit()
     fig = plt.figure()
 
     fit(lost_vector1,'sqrt')
-    fit.plot(axis = fig.add_subplot(111),
+    fit.plot(axis = fig.add_subplot(121),
             title = "Lost Events Histogram",
             xlabel = "Number of Lost Events",
             ylabel = "Hits",
             res = False)
 
     fit(lost_vector2,'sqrt')
-    fit.plot(axis = fig.add_subplot(111),
+    fit.plot(axis = fig.add_subplot(122),
             title = "Lost Events Histogram",
             xlabel = "Number of Lost Events",
             ylabel = "Hits",

@@ -80,32 +80,55 @@ class consumer(object):
 
 if __name__ == '__main__':
 
-    lost_vector=np.zeros(1000)
+    lost_vector1=np.zeros(1000)
+    lost_vector2=np.zeros(1000)
+
     for i in range(1000):
-        message = np.random.randint(1,10,size=100)
+        message1 = np.random.randint(1,10,size=100)
+        message2 = np.random.randint(1,10,size=100)
         env = simpy.Environment()
         data_out=[]
         C = consumer(env,
                     delay=5,
                     data_out=data_out)
-        P = producer(env,
+
+        P1 = producer(env,
                     max_delay=2,
                     FIFO_size=2,
-                    message = message)
-        P.out = C
+                    message = message1)
+
+        P2 = producer(env,
+                    max_delay=2,
+                    FIFO_size=2,
+                    message = message1)
+
+        P1.out = C
+        P2.out = C
 
         env.run()
         print ("\n -------------------- \n \
-Total Lost Events %d \n --------------------" % P.lost)
-        lost_vector[i] = P.lost
+Total Lost Events %d \n --------------------" % P1.lost)
+        lost_vector1[i] = P1.lost
+
+        print ("\n -------------------- \n \
+Total Lost Events %d \n --------------------" % P2.lost)
+        lost_vector2[i] = P2.lost
 
     fit = fit_library.gauss_fit()
-    fit(lost_vector,'sqrt')
-
     fig = plt.figure()
+
+    fit(lost_vector1,'sqrt')
     fit.plot(axis = fig.add_subplot(111),
             title = "Lost Events Histogram",
             xlabel = "Number of Lost Events",
             ylabel = "Hits",
             res = False)
+
+    fit(lost_vector2,'sqrt')
+    fit.plot(axis = fig.add_subplot(111),
+            title = "Lost Events Histogram",
+            xlabel = "Number of Lost Events",
+            ylabel = "Hits",
+            res = False)
+
     plt.show()

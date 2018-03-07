@@ -26,7 +26,8 @@ class parameters(object):
 
     def __init__(self,ch_rate,FE_outrate,
                  FIFO_depth,FIFO_out_depth,
-                 FE_ch_latency,TE,sensors,events):
+                 FE_ch_latency,TE,TGAIN,
+                 sensors,events):
         self.ch_rate     = ch_rate
         self.FE_outrate  = FE_outrate
         self.FIFO_depth  = FIFO_depth
@@ -35,6 +36,7 @@ class parameters(object):
         self.FIFO_out_depth = FIFO_out_depth
         self.FE_ch_latency  = FE_ch_latency      # Maximum Ch Latency
         self.TE        = TE
+        self.TGAIN      = TGAIN
 
 
 class hdf_access(object):
@@ -63,7 +65,6 @@ class producer(object):
         # Connection with receptor
         self.action = env.process(self.run())
         self.counter = 0
-        self.max_delay = 1E9/param.ch_rate
         self.lost = 0
         self.data = data
         self.timing = timing
@@ -95,6 +96,7 @@ class FE_channel(object):
         self.latency = param.FE_ch_latency
         self.index = 0
         self.lost = 0
+        self.gain = param.TGAIN
         self.log = []
 
     def print_stats(self):
@@ -116,7 +118,7 @@ class FE_channel(object):
     def run(self):
         while True:
             self.msg = yield self.res.get()
-            self.wilk_delay = int((self.latency/1024)*self.msg)
+            self.wilk_delay = int((self.latency/1024)*self.msg*self.gain)
             if self.wilk_delay > self.latency:
                 self.wilk_delay = self.latency
             yield self.env.timeout(self.wilk_delay)
@@ -161,23 +163,18 @@ class FE_outlink(object):
 
 
 
+def simulation(ch_rate,FE_outrate,FIFO_depth,FIFO_out_depth,FE_ch_latency,
+                TE, TGAIN, sensors, events):
 
-if __name__ == '__main__':
-
-    data_out=[]
     lostP,lostC = 0,0
-    disk  = hdf_access("/home/viherbos/TEMP/","processed.h5")
-    DATA,sensors,events = disk.read()
-
-    print np.mean(DATA)
-
-    Param = parameters( ch_rate    = 200E3,
-                        FE_outrate = (2.6E9/80)/2,   # 2.6Gb/s - 80 bits ch
-                        FIFO_depth  = 4,
-                        FIFO_out_depth = 64*2,
-                        FE_ch_latency = 5120,    # Max Wilkinson Latency
-                        TE = 5,
-                        sensors = 64,
+    Param = parameters( ch_rate    = ch_rate,
+                        FE_outrate = FE_outrate,   # 2.6Gb/s - 80 bits ch
+                        FIFO_depth  = FIFO_depth,
+                        FIFO_out_depth = FIFO_out_depth,
+                        FE_ch_latency = FE_ch_latency,    # Max Wilkinson Latency
+                        TE = TE,
+                        TGAIN = TGAIN,
+                        sensors = sensors,
                         events = events)
 
     timing = np.random.randint(0,int(1E9/Param.ch_rate),size=events)
@@ -204,6 +201,30 @@ if __name__ == '__main__':
         lostP = lostP + P[i].lost
         lostC = lostC + C[i].lost
 
+    return lostP,lostC,L.log
+
+
+
+if __name__ == '__main__':
+
+    data_out=[]
+    disk  = hdf_access("/home/viherbos/TEMP/","processed.h5")
+    DATA,sensors,events = disk.read()
+
+    print np.mean(DATA)
+
+    lostP,lostC,log = simulation( ch_rate    = 300E3,
+                                  FE_outrate = (2.6E9/80)/2,
+                                  # 2.6Gb/s - 80 bits ch
+                                  FIFO_depth  = 4,
+                                  FIFO_out_depth = 64*4,
+                                  FE_ch_latency = 5120,
+                                  # Max Wilkinson Latency
+                                  TE = 7,
+                                  TGAIN = 2,
+                                  sensors = 64,
+                                  events = events)
+
     print ("\n --------------------------------- \n")
     print ("FE Input Lost Events %d / Recovered Events %d\n" % (lostP,len(data_out)))
     print ("------------------------------------ \n")
@@ -211,6 +232,10 @@ if __name__ == '__main__':
     print ("\n --------------------------------- \n")
     print ("FE Output Lost Events %d / Recovered Events %d\n" % (lostC,len(data_out)))
     print ("------------------------------------ \n")
+
+    plt.plot(log[:,1],log[:,0])
+    plt.show()
+
 
     # fit = fit_library.gauss_fit()
     # fig = plt.figure()
@@ -223,5 +248,3 @@ if __name__ == '__main__':
     #         res = False)
     #
     # plt.show()
-    plt.plot(L.log[:,0])
-    plt.show()

@@ -70,10 +70,10 @@ def simulation(run,DATA,
 
 if __name__ == '__main__':
 
-    disk  = TOFPET.hdf_access("/home/viherbos/TEMP/","processed.h5")
+    disk  = TOFPET.hdf_access("./","processed.h5")
     DATA,sensors,events = disk.read()
 
-    runs = 250
+    runs = 1
     latency = np.array([]).reshape(0,1)
 
     # Multiprocess Work
@@ -81,14 +81,14 @@ if __name__ == '__main__':
     pool = mp.Pool(processes=pool_size)
 
     sim_info={    'DATA'          : DATA,
-                  'ch_rate'       : 200E3,
+                  'ch_rate'       : 300E3,
                   'FE_outrate'    : (2.6E9/80)/2,
                   # 2.6Gb/s - 80 bits ch
                   'FIFO_depth'    : 4,
                   'FIFO_out_depth': 64*4,
                   'FE_ch_latency' : 5120,
                   # Max Wilkinson Latency
-                  'TE' : 2,
+                  'TE' : 7,
                   'TGAIN' : 1,
                   'sensors' : 64,
                   'events' : events}
@@ -102,6 +102,8 @@ if __name__ == '__main__':
     lostP = [pool_output[j]['lostP'] for j in range(runs)]
     lostC = [pool_output[j]['lostC'] for j in range(runs)]
     outlink_ch = [ len(pool_output[j]['data_out'][:,0]) for j in range(runs)]
+    total_ch_event = np.array(outlink_ch).sum()
+    print total_ch_event
 
     for i in range(runs):
         data_aux = np.array(pool_output[i]['data_out'])
@@ -115,31 +117,38 @@ if __name__ == '__main__':
     fit = fit_library.gauss_fit()
     fig = plt.figure(figsize=(16,4))
     fit(lostP,'sqrt')
-    fit.plot(axis = fig.add_subplot(141),
+    fit.plot(axis = fig.add_subplot(241),
             title = "FE FIFO drops",
             xlabel = "Number of Lost Events",
             ylabel = "Hits",
             res = False)
     fit(lostC,'sqrt')
-    fit.plot(axis = fig.add_subplot(142),
+    fit.plot(axis = fig.add_subplot(242),
             title = "Data Link FIFO drops",
             xlabel = "Number of Lost Events",
             ylabel = "Hits",
             res = False)
     fit(outlink_ch,'sqrt')
-    fit.plot(axis = fig.add_subplot(143),
+    fit.plot(axis = fig.add_subplot(243),
             title = "Recovered Channel Data",
             xlabel = "Number of Channel Events",
             ylabel = "Hits",
             res = False)
-    fit(latency,'sqrt')
-    fit.plot(axis = fig.add_subplot(144),
+    fit(latency,50)
+    fit.plot(axis = fig.add_subplot(244),
             title = "Data Latency",
             xlabel = "Latency in nanoseconds",
             ylabel = "Hits",
             res = False)
 
+    fig.add_subplot(248)
+    x_data = fit.bin_centers
+    y_data = np.add.accumulate(fit.hist_fit)/np.max(np.add.accumulate(fit.hist_fit))
+    plt.plot(x_data,y_data)
+    plt.ylim((0.9,1.0))
     plt.show()
+
+
 
 
 #     output = mapfunc(1,**sim_info)

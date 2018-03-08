@@ -88,7 +88,7 @@ if __name__ == '__main__':
                   'FIFO_out_depth': 64*4,
                   'FE_ch_latency' : 5120,
                   # Max Wilkinson Latency
-                  'TE' : 7,
+                  'TE' : 2,
                   'TGAIN' : 1,
                   'sensors' : 64,
                   'events' : events}
@@ -113,7 +113,7 @@ if __name__ == '__main__':
 
 
     fit = fit_library.gauss_fit()
-    fig = plt.figure(figsize=(12,4))
+    fig = plt.figure(figsize=(16,4))
     fit(lostP,'sqrt')
     fit.plot(axis = fig.add_subplot(141),
             title = "FE FIFO drops",

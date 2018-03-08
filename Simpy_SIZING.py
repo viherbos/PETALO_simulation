@@ -10,7 +10,8 @@ import fit_library
 import HF_translator as HFT
 import os
 import pandas as pd
-
+import multiprocessing as mp
+from functools import partial
 
 
 class Full(Exception):
@@ -163,9 +164,9 @@ class FE_outlink(object):
 
 
 
-def simulation(ch_rate,FE_outrate,FIFO_depth,FIFO_out_depth,FE_ch_latency,
+def simulation(run,ch_rate,FE_outrate,FIFO_depth,FIFO_out_depth,FE_ch_latency,
                 TE, TGAIN, sensors, events):
-
+    data_out=[]
     lostP,lostC = 0,0
     Param = parameters( ch_rate    = ch_rate,
                         FE_outrate = FE_outrate,   # 2.6Gb/s - 80 bits ch
@@ -201,50 +202,86 @@ def simulation(ch_rate,FE_outrate,FIFO_depth,FIFO_out_depth,FE_ch_latency,
         lostP = lostP + P[i].lost
         lostC = lostC + C[i].lost
 
-    return lostP,lostC,L.log
+    output = {  'lostP':lostP,
+                'lostC':lostC,
+                'log':L.log,
+                'data_out':data_out
+                }
+
+    return output
 
 
 
 if __name__ == '__main__':
 
-    data_out=[]
     disk  = hdf_access("/home/viherbos/TEMP/","processed.h5")
     DATA,sensors,events = disk.read()
 
-    print np.mean(DATA)
+    runs = 500
 
-    lostP,lostC,log = simulation( ch_rate    = 300E3,
-                                  FE_outrate = (2.6E9/80)/2,
-                                  # 2.6Gb/s - 80 bits ch
-                                  FIFO_depth  = 4,
-                                  FIFO_out_depth = 64*4,
-                                  FE_ch_latency = 5120,
-                                  # Max Wilkinson Latency
-                                  TE = 7,
-                                  TGAIN = 2,
-                                  sensors = 64,
-                                  events = events)
+    # Multiprocess Work
+    pool_size = mp.cpu_count()
+    pool = mp.Pool(processes=pool_size)
 
-    print ("\n --------------------------------- \n")
-    print ("FE Input Lost Events %d / Recovered Events %d\n" % (lostP,len(data_out)))
-    print ("------------------------------------ \n")
+    sim_info={    'ch_rate'       : 200E3,
+                  'FE_outrate'    : (2.6E9/80)/2,
+                  # 2.6Gb/s - 80 bits ch
+                  'FIFO_depth'    : 4,
+                  'FIFO_out_depth': 64*4,
+                  'FE_ch_latency' : 5120,
+                  # Max Wilkinson Latency
+                  'TE' : 5,
+                  'TGAIN' : 1,
+                  'sensors' : 64,
+                  'events' : events}
 
-    print ("\n --------------------------------- \n")
-    print ("FE Output Lost Events %d / Recovered Events %d\n" % (lostC,len(data_out)))
-    print ("------------------------------------ \n")
+    mapfunc = partial(simulation, **sim_info)
+    pool_output = pool.map(mapfunc, (i for i in range(runs)))
 
-    plt.plot(log[:,1],log[:,0])
+    pool.close()
+    pool.join()
+
+    lostP = [pool_output[j]['lostP'] for j in range(runs)]
+    lostC = [pool_output[j]['lostC'] for j in range(runs)]
+    outlink_ch = [ len(pool_output[j]['data_out']) for j in range(runs)]
+
+
+    fit = fit_library.gauss_fit()
+    fig = plt.figure()
+    fit(lostP,'sqrt')
+    fit.plot(axis = fig.add_subplot(131),
+            title = "FE FIFO drops",
+            xlabel = "Number of Lost Events",
+            ylabel = "Hits",
+            res = False)
+    fit(lostC,'sqrt')
+    fit.plot(axis = fig.add_subplot(132),
+            title = "Data Link FIFO drops",
+            xlabel = "Number of Lost Events",
+            ylabel = "Hits",
+            res = False)
+    fit(outlink_ch,'sqrt')
+    fit.plot(axis = fig.add_subplot(133),
+            title = "Recovered Channel Data",
+            xlabel = "Number of Channel Events",
+            ylabel = "Hits",
+            res = False)
     plt.show()
 
 
-    # fit = fit_library.gauss_fit()
-    # fig = plt.figure()
-    #
-    # fit((DATA[:,1]>10)*DATA[:,1],'sqrt')
-    # fit.plot(axis = fig.add_subplot(121),
-    #         title = "Lost Events Histogram",
-    #         xlabel = "Number of Lost Events",
-    #         ylabel = "Hits",
-    #         res = False)
-    #
-    # plt.show()
+
+
+#output = mapfunc(1,**sim_info)
+
+# print ("\n --------------------------------- \n")
+# print ("FE Input Lost Events %d / Recovered Events %d\n" % (output['lostP'],
+#                                                             len(output['data_out'])))
+# print ("------------------------------------ \n")
+#
+# print ("\n --------------------------------- \n")
+# print ("FE Output Lost Events %d / Recovered Events %d\n" % (output['lostC'],
+#                                                             len(output['data_out'])))
+# print ("------------------------------------ \n")
+#
+# plt.plot(output['log'][:,1],output['log'][:,0])
+# plt.show()

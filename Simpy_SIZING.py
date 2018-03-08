@@ -83,16 +83,17 @@ if __name__ == '__main__':
     sim_info={    'DATA'          : DATA,
                   'ch_rate'       : 300E3,
                   'FE_outrate'    : (2.6E9/80)/2,
-                  # 2.6Gb/s - 80 bits ch
                   'FIFO_depth'    : 4,
                   'FIFO_out_depth': 64*4,
                   'FE_ch_latency' : 5120,
-                  # Max Wilkinson Latency
-                  'TE' : 7,
+                  'TE' : 5,
                   'TGAIN' : 1,
                   'sensors' : 64,
                   'events' : events}
 
+    # 2.6Gb/s - 80 bits ch
+    # Max Wilkinson Latency
+    
     mapfunc = partial(simulation, **sim_info)
     pool_output = pool.map(mapfunc, (i for i in range(runs)))
 

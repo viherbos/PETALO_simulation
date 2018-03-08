@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     # 2.6Gb/s - 80 bits ch
     # Max Wilkinson Latency
-    
+
     mapfunc = partial(simulation, **sim_info)
     pool_output = pool.map(mapfunc, (i for i in range(runs)))
 

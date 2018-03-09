@@ -73,7 +73,7 @@ if __name__ == '__main__':
     disk  = TOFPET.hdf_access("./","processed.h5")
     DATA,sensors,events = disk.read()
 
-    runs = 1
+    runs = 250
     latency = np.array([]).reshape(0,1)
 
     # Multiprocess Work
@@ -81,12 +81,12 @@ if __name__ == '__main__':
     pool = mp.Pool(processes=pool_size)
 
     sim_info={    'DATA'          : DATA,
-                  'ch_rate'       : 300E3,
-                  'FE_outrate'    : (2.6E9/80)/2,
+                  'ch_rate'       : 200E3,
+                  'FE_outrate'    : (2.6E9/80),
                   'FIFO_depth'    : 4,
                   'FIFO_out_depth': 64*4,
                   'FE_ch_latency' : 5120,
-                  'TE' : 5,
+                  'TE' : 8,
                   'TGAIN' : 1,
                   'sensors' : 64,
                   'events' : events}

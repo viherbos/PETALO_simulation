@@ -36,7 +36,7 @@ class parameters(object):
         self.TGAIN      = TGAIN
 
 
-class frame(object):
+class ch_frame(object):
 
     def __init__(self,data,event,sensor_id,asic_id,in_time,out_time):
         self.data = data
@@ -69,8 +69,9 @@ class hdf_access(object):
                                           dtype = 'int32')
         # Reads translated hf files (table with sensor/charge per event)
         self.events = self.data.shape[0]
-        self.sensors = self.data.shape[1]
+        self.sensors = np.array(self.data.columns)
 
+        #returns data array, sensors vector, and number of events
         return self.data,self.sensors,self.events
 
 

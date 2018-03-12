@@ -36,7 +36,28 @@ class parameters(object):
         self.TGAIN      = TGAIN
 
 
+class frame(object):
+
+    def __init__(self,data,event,sensor_id,asic_id,in_time,out_time):
+        self.data = data
+        self.sensor_id = sensor_id
+        self.event = event
+        self.asic_id = asic_id
+        self.in_time = in_time
+        self.out_time = out_time
+
+    def __repr__(self):
+        return "data: {}, event: {}, sensor_id: {}, asic_id: {} in_time:{} out_time:{}".\
+            format( self.data, self.event, self.sensor_id, self.asic_id,
+                    self.in_time, self.out_time)
+
+
 class hdf_access(object):
+    """ A utility class to access data in hf5 format.
+        read method is used to load data from a preprocessed file.
+        The file format is a table with each column is a sensor and
+        each row an event
+    """
 
     def __init__(self,path,file_name):
         self.path = path
@@ -55,6 +76,15 @@ class hdf_access(object):
 
 
 class producer(object):
+    """ Sends data to a given channel. DATA has 3 elements:
+            Charge, in_time, out_time(0)
+        Parameters
+        env     : Simpy environment
+        counter : Event counter
+        lost    : FIFO drops counter (Channel Input FIFO)
+        TE      : Energy threshold for channel filtering
+        timing  : reads delay from previously generated vector
+    """
 
     def __init__(self,env,data,timing,param):
         self.env = env
@@ -85,6 +115,18 @@ class producer(object):
 
 
 class FE_channel(object):
+    """ ASIC channel model.
+        Method
+        put     : Input FIFO storing method
+        Parameters
+        env     : Simpy environment
+        FIFO_size : Size of input FIFO (4)
+        lost    : FIFO drops counter (output FIFO)
+        gain    : channel QDC gain
+        timing  : reads delay from previously generated vector
+        latency : Wilkinson ADC latency (in terms of amplitude)
+        log     : Stores log of items and time in input FIFO
+    """
 
     def __init__(self,env,param):
         self.env = env
@@ -129,6 +171,15 @@ class FE_channel(object):
 
 
 class FE_outlink(object):
+    """ ASIC Outlink model.
+        Method
+        put     : Output link FIFO storing method
+        Parameters
+        env     : Simpy environment
+        FIFO_out_size : Size of output FIFO
+        latency : Latency depends on output link speed
+        log     : Stores time and number of FIFO elements
+    """
     def __init__(self,env,out_stream,param):
         self.env = env
         self.FIFO_out_size = param.FIFO_out_depth

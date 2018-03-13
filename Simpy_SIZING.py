@@ -71,7 +71,7 @@ def simulation(run,DATA,
 if __name__ == '__main__':
 
     disk  = TOFPET.hdf_access("./","processed.h5")
-    DATA,sensors,events = disk.read()
+    DATA,sensors,n_events = disk.read()
 
     runs = 250
     latency = np.array([]).reshape(0,1)
@@ -89,7 +89,7 @@ if __name__ == '__main__':
                   'TE' : 8,
                   'TGAIN' : 1,
                   'sensors' : 64,
-                  'events' : events}
+                  'events' : n_events}
 
     # 2.6Gb/s - 80 bits ch
     # Max Wilkinson Latency

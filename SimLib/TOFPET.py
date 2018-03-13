@@ -46,6 +46,10 @@ class ch_frame(object):
         self.in_time = in_time
         self.out_time = out_time
 
+    def get_np_array(self):
+        return np.array([self.data, self.event, self.sensor_id, self.asic_id,
+                self.in_time, self.out_time])
+
     def __repr__(self):
         return "data: {}, event: {}, sensor_id: {}, asic_id: {} in_time:{} out_time:{}".\
             format( self.data, self.event, self.sensor_id, self.asic_id,
@@ -87,7 +91,7 @@ class producer(object):
         timing  : reads delay from previously generated vector
     """
 
-    def __init__(self,env,data,timing,param):
+    def __init__(self,env,data,timing,param,sensor_id,asic_id):
         self.env = env
         self.out = None
         # Connection with receptor
@@ -97,6 +101,8 @@ class producer(object):
         self.data = data
         self.timing = timing
         self.TE = param.TE
+        self.sensor_id = sensor_id
+        self.asic_id = asic_id
 
     def run(self):
         while self.counter < len(self.data):
@@ -106,7 +112,13 @@ class producer(object):
 
             try:
                 if self.data[self.counter]>self.TE:
-                    self.DATA = np.array([self.data[self.counter],self.env.now,0])
+                    self.DATA = ch_frame(data     = self.data[self.counter],
+                                        event     = self.counter,
+                                        sensor_id = self.sensor_id,
+                                        asic_id   = self.asic_id,
+                                        in_time   = self.env.now,
+                                        out_time  = 0)
+                    #np.array([self.data[self.counter],self.env.now,0])
                     # PACKET FRAME: [SENSOR_DATA, IN_TIME, OUT_TIME]
                     self.lost = self.out.put(self.DATA,self.lost)
                 self.counter += 1
@@ -211,7 +223,12 @@ class FE_outlink(object):
         while True:
             yield self.env.timeout(self.latency)
             self.msg = yield self.res.get()
-            self.msg[2] = self.env.now
+            self.msg.out_time = self.env.now
             #self.print_stats()
-            self.out_stream = np.vstack([self.out_stream,self.msg])
+            self.out_stream = np.pad(self.out_stream,((1,0),(0,0)),
+                                    mode='constant',
+                                    constant_values=0)
+            self.out_stream[0,:] = self.msg.get_np_array()
+            #np.vstack([self.out_stream,self.msg])
+            #vstack too slow
             #print self.out_stream.shape

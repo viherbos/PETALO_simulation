@@ -17,13 +17,13 @@ class HF(object):
 
     def read(self):
         os.chdir(self.path)
-        self.waves   = np.array( pd.read_hdf(self.in_file,key='Run/waveforms'),
+        self.waves   = np.array( pd.read_hdf(self.in_file,key='MC/waveforms'),
                             dtype = 'int32')
-        self.extents = np.array( pd.read_hdf(self.in_file,key='Run/extents'),
+        self.extents = np.array( pd.read_hdf(self.in_file,key='MC/extents'),
                             dtype = 'int32')
         self.n_events = self.extents.shape[0]
 
-        sensors_t = np.array( pd.read_hdf(self.in_file,key='Run/sensor_positions'),
+        sensors_t = np.array( pd.read_hdf(self.in_file,key='MC/sensor_positions'),
                             dtype = 'int32')
         self.sensors = sensors_t[:,0]
 
@@ -32,7 +32,7 @@ class HF(object):
             panel_array = pd.DataFrame( data=self.out_table,
                                         columns=self.sensors)
             # complevel and complib are not compatible with MATLAB
-            store.put('run',panel_array)
+            store.put('MC',panel_array)
             store.close()
         # panel_array = pd.DataFrame( data=self.out_table,columns=self.sensors)
         # panel_array.to_hdf( self.out_file,
@@ -60,9 +60,9 @@ class HF(object):
 
 
 def main():
-    TEST_c = HF(  "/home/viherbos/TEMP/",
-                  "petit_prova.pet.h5",
-                  "processed.h5")
+    TEST_c = HF(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
+                  "LXe_SiPM9mm2_xyz5cm_0.pet.h5",
+                  "p_SET1.h5")
     TEST_c.read()
     TEST_c.process()
     TEST_c.write()

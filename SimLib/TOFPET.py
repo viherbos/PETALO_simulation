@@ -50,6 +50,21 @@ class ch_frame(object):
         return np.array([self.data, self.event, self.sensor_id, self.asic_id,
                 self.in_time, self.out_time])
 
+    def put_np_array(self, nparray):
+        aux_list = {'data'      :   nparray[0],
+                    'event'     :   nparray[1],
+                    'sensor_id' :   nparray[2],
+                    'asic_id'   :   nparray[3],
+                    'in_time'   :   nparray[4],
+                    'out_time'  :   nparray[5]}
+
+        self.data       = aux_list['data']
+        self.sensor_id  = aux_list['sensor_id']
+        self.event      = aux_list['event']
+        self.asic_id    = aux_list['asic_id']
+        self.in_time    = aux_list['in_time']
+        self.out_time   = aux_list['out_time']
+
     def __repr__(self):
         return "data: {}, event: {}, sensor_id: {}, asic_id: {} in_time:{} out_time:{}".\
             format( self.data, self.event, self.sensor_id, self.asic_id,
@@ -69,11 +84,12 @@ class hdf_access(object):
 
     def read(self):
         os.chdir(self.path)
-        self.data = np.array( pd.read_hdf(self.file_name,key='run'),
-                                          dtype = 'int32')
+        self.data = pd.read_hdf(self.file_name,key='MC')
+
         # Reads translated hf files (table with sensor/charge per event)
-        self.events = self.data.shape[0]
         self.sensors = np.array(self.data.columns)
+        self.data = np.array(self.data, dtype = 'int32')
+        self.events = self.data.shape[0]
 
         #returns data array, sensors vector, and number of events
         return self.data,self.sensors,self.events
@@ -104,6 +120,7 @@ class producer(object):
         self.sensor_id = sensor_id
         self.asic_id = asic_id
 
+
     def run(self):
         while self.counter < len(self.data):
 
@@ -120,7 +137,7 @@ class producer(object):
                                         out_time  = 0)
                     #np.array([self.data[self.counter],self.env.now,0])
                     # PACKET FRAME: [SENSOR_DATA, IN_TIME, OUT_TIME]
-                    self.lost = self.out.put(self.DATA,self.lost)
+                    self.lost = self.out.put(self.DATA.get_np_array(),self.lost)
                 self.counter += 1
                 # Drop data. FIFO is FULL so data is lost
             except IndexError:
@@ -141,7 +158,7 @@ class FE_channel(object):
         log     : Stores log of items and time in input FIFO
     """
 
-    def __init__(self,env,param):
+    def __init__(self,env,param,sensor_id):
         self.env = env
         self.FIFO_size = param.FIFO_depth
         self.res = simpy.Store(self.env,capacity=self.FIFO_size)
@@ -152,6 +169,7 @@ class FE_channel(object):
         self.lost = 0
         self.gain = param.TGAIN
         self.log = []
+        self.sensor_id = sensor_id
 
     def print_stats(self):
         #print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
@@ -193,7 +211,7 @@ class FE_outlink(object):
         latency : Latency depends on output link speed
         log     : Stores time and number of FIFO elements
     """
-    def __init__(self,env,out_stream,param):
+    def __init__(self,env,out_stream,param,asic_id):
         self.env = env
         self.FIFO_out_size = param.FIFO_out_depth
         self.res = simpy.Store(self.env,capacity=self.FIFO_out_size)
@@ -201,6 +219,7 @@ class FE_outlink(object):
         self.out_stream = out_stream
         self.latency = int(1E9/param.FE_outrate)
         self.log = np.array([]).reshape(0,2)
+        self.asic_id = asic_id
 
     def print_stats(self):
         #print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
@@ -223,12 +242,50 @@ class FE_outlink(object):
         while True:
             yield self.env.timeout(self.latency)
             self.msg = yield self.res.get()
-            self.msg.out_time = self.env.now
+            self.msg[5] = self.env.now
             #self.print_stats()
             self.out_stream = np.pad(self.out_stream,((1,0),(0,0)),
                                     mode='constant',
                                     constant_values=0)
-            self.out_stream[0,:] = self.msg.get_np_array()
+            self.out_stream[0,:] = self.msg
             #np.vstack([self.out_stream,self.msg])
             #vstack too slow
-            #print self.out_stream.shape
+            
+
+class FE_asic(object):
+    """ ASIC model.
+        Method
+
+        Parameters
+        sensor_id : Array with the positions of the sensors being used (param.sensors)
+    """
+    def __init__(self,env,param,data,n_ch,timing,sensor_id,asic_id):
+        self.env        = env
+        self.Param      = param
+        self.DATA       = data
+        self.timing     = timing
+        self.sensors    = sensor_id
+        self.asic_id    = asic_id
+        self.n_ch       = n_ch
+        self.data_out   = np.array([]).reshape(0,6)
+
+        # System Instanciation and Wiring
+        self.Producer = [producer(   self.env,
+                                data       = self.DATA[:,i],
+                                timing     = self.timing,
+                                param      = self.Param,
+                                sensor_id  = self.sensors[i],
+                                asic_id    = self.asic_id)
+                                            for i in range(self.n_ch)]
+        self.Channels = [FE_channel( self.env,
+                                param = self.Param,
+                                sensor_id = self.sensors[i])
+                                            for i in range(self.n_ch)]
+        self.Link     = FE_outlink(  self.env,
+                                self.data_out,
+                                self.Param,
+                                asic_id = self.asic_id)
+
+        for i in range(self.n_ch):
+            self.Producer[i].out = self.Channels[i]
+            self.Channels[i].out = self.Link

@@ -12,6 +12,7 @@ import os
 import multiprocessing as mp
 from functools import partial
 from SimLib import TOFPET
+import time
 
 
 def simulation(run,DATA,
@@ -20,7 +21,7 @@ def simulation(run,DATA,
                FE_ch_latency,
                TE, TGAIN, sensors, events):
 
-    data_out = np.array([]).reshape(0,3)
+    data_out = np.array([]).reshape(0,6)
     lostP,lostC = 0,0
     Param = TOFPET.parameters(
                         ch_rate    = ch_rate,
@@ -36,32 +37,48 @@ def simulation(run,DATA,
 
     timing = np.random.randint(0,int(1E9/Param.ch_rate),size=events)
     # All sensors are given the same timestamp in an events
+    sensor_id = range(64)
     env = simpy.Environment()
 
     # System Instanciation and Wiring
-    P = [TOFPET.producer(env,
-                        data = DATA[:,i],
-                        timing  = timing,
-                        param = Param) for i in range(Param.sensors)]
-    C = [TOFPET.FE_channel(env,
-                        param=Param) for i in range(Param.sensors)]
-    L = TOFPET.FE_outlink(env,data_out,Param)
+    # P = [TOFPET.producer(env,
+    #                      data = DATA[:,i],
+    #                      timing  = timing,
+    #                      param = Param,
+    #                      sensor_id = sensors[i])
+    #                                     for i in range(len(Param.sensors))]
+    # C = [TOFPET.FE_channel( env,
+    #                         param = Param,
+    #                         sensor_id = sensor[i])
+    #                                     for i in range(len(Param.sensors))]
+    # L = TOFPET.FE_outlink(  env,
+    #                         data_out,
+    #                         Param,
+    #                         asic_id = 0)
+    #
+    # for i in range(Param.sensors):
+    #     P[i].out = C[i]
+    #     C[i].out = L
 
-    for i in range(Param.sensors):
-        P[i].out = C[i]
-        C[i].out = L
-
+    ASIC_0 = TOFPET.FE_asic( env         = env,
+                            param       = Param,
+                            data        = DATA,
+                            n_ch        = 64,
+                            timing      = timing,
+                            sensor_id   = sensor_id,
+                            asic_id     = 0)
 
     env.run()
 
-    for i in range(Param.sensors):
-        lostP = lostP + P[i].lost
-        lostC = lostC + C[i].lost
+    for i in range(64):
+        lostP = lostP + ASIC_0.Producer[i].lost
+        lostC = lostC + ASIC_0.Channels[i].lost
+
 
     output = {  'lostP':lostP,
                 'lostC':lostC,
-                'log':L.log,
-                'data_out':L.out_stream
+                'log':ASIC_0.Link.log,
+                'data_out':ASIC_0.Link.out_stream
                 }
 
     return output
@@ -70,10 +87,12 @@ def simulation(run,DATA,
 
 if __name__ == '__main__':
 
-    disk  = TOFPET.hdf_access("./","processed.h5")
+    disk  = TOFPET.hdf_access(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
+                                "p_SET1.h5")
     DATA,sensors,n_events = disk.read()
+    print (" NUMBER OF EVENTS IN SIMULATION: %d" % n_events)
 
-    runs = 250
+    runs = 32
     latency = np.array([]).reshape(0,1)
 
     # Multiprocess Work
@@ -81,18 +100,20 @@ if __name__ == '__main__':
     pool = mp.Pool(processes=pool_size)
 
     sim_info={    'DATA'          : DATA,
-                  'ch_rate'       : 200E3,
-                  'FE_outrate'    : (2.6E9/80),
+                  'ch_rate'       : 300E3,
+                  'FE_outrate'    : (2.6E9/80)/2,
                   'FIFO_depth'    : 4,
                   'FIFO_out_depth': 64*4,
                   'FE_ch_latency' : 5120,
-                  'TE' : 8,
+                  'TE' : 7,
                   'TGAIN' : 1,
-                  'sensors' : 64,
+                  'sensors' : sensors,
                   'events' : n_events}
 
     # 2.6Gb/s - 80 bits ch
     # Max Wilkinson Latency
+
+    start_time = time.time()
 
     mapfunc = partial(simulation, **sim_info)
     pool_output = pool.map(mapfunc, (i for i in range(runs)))
@@ -100,19 +121,31 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
+
+
     lostP = [pool_output[j]['lostP'] for j in range(runs)]
     lostC = [pool_output[j]['lostC'] for j in range(runs)]
     outlink_ch = [ len(pool_output[j]['data_out'][:,0]) for j in range(runs)]
     total_ch_event = np.array(outlink_ch).sum()
-    print total_ch_event
+
+    print ("A total of %d events processed" % total_ch_event)
 
     for i in range(runs):
-        data_aux = np.array(pool_output[i]['data_out'])
-        in_time  = data_aux[:,1]
-        out_time = data_aux[:,2]
-        latency_aux  = out_time - in_time
-        latency = np.vstack([latency,latency_aux.reshape(-1,1)])
-        data_out = data_aux[:,0]
+        data_frame_array = pool_output[i]['data_out'][:,:]
+
+        in_time_array  = data_frame_array[:,4]
+        out_time_array = data_frame_array[:,5]
+        latency_aux  = out_time_array - in_time_array
+        #latency = np.vstack([latency,latency_aux.reshape(-1,1)])
+        latency = np.pad(latency,((len(latency_aux),0),(0,0)),
+                                 mode='constant',
+                                 constant_values=0)
+        # print latency.shape
+        latency[0:len(latency_aux),0] = latency_aux
+
+
+    elapsed_time = time.time()-start_time
+    print ("IT TOOK %d SECONDS TO DO THIS" % elapsed_time)
 
 
     fit = fit_library.gauss_fit()

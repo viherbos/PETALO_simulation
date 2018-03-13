@@ -250,7 +250,7 @@ class FE_outlink(object):
             self.out_stream[0,:] = self.msg
             #np.vstack([self.out_stream,self.msg])
             #vstack too slow
-            
+
 
 class FE_asic(object):
     """ ASIC model.

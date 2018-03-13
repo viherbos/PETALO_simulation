@@ -60,12 +60,14 @@ class HF(object):
 
 
 def main():
-    TEST_c = HF(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
-                  "LXe_SiPM9mm2_xyz5cm_0.pet.h5",
-                  "p_SET1.h5")
-    TEST_c.read()
-    TEST_c.process()
-    TEST_c.write()
+
+    for i in range(30):
+        TEST_c = HF(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
+                      "LXe_SiPM9mm2_xyz5cm_"+str(i)+".pet.h5",
+                      "p_SET_" + str(i) + ".h5" )
+        TEST_c.read()
+        TEST_c.process()
+        TEST_c.write()
 
 
 

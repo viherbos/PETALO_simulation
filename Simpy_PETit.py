@@ -15,9 +15,6 @@ from SimLib import TOFPET
 import time
 
 
-# TOFPET DATA FLOW CHARACTERIZATION
-
-
 def simulation(run,DATA,
                ch_rate,FE_outrate,
                FIFO_depth,FIFO_out_depth,

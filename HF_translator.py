@@ -30,10 +30,17 @@ class HF(object):
 
     def write(self):
         with pd.HDFStore(self.out_file) as store:
-            panel_array = pd.DataFrame( data=self.out_table,
-                                        columns=self.sensors)
+            self.panel_array = pd.DataFrame( data=self.out_table,
+                                             columns=self.sensors)
+            self.sensors_xyz = np.array( pd.read_hdf(self.in_file,
+                                        key='MC/sensor_positions'),
+                                        dtype = 'float32')
+            self.sensors_order = np.argsort(self.sensors_xyz[:,0])
+            self.sensors_array = pd.DataFrame( data=self.sensors_xyz[self.sensors_order,:],
+                                                columns=['sensor','x','y','z'])
             # complevel and complib are not compatible with MATLAB
-            store.put('MC',panel_array)
+            store.put('MC',self.panel_array)
+            store.put('sensors',self.sensors_array)
             store.close()
         # panel_array = pd.DataFrame( data=self.out_table,columns=self.sensors)
         # panel_array.to_hdf( self.out_file,
@@ -73,6 +80,7 @@ class HF(object):
             #print ("EVENT %d processed" % i)
             count_a = 0
 
+        # Rows -> Events // Columns -> Sensors (Ordered by detector, 64 each ASIC)
 
 def main():
 

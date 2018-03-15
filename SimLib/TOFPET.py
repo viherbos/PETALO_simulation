@@ -71,31 +71,6 @@ class ch_frame(object):
                     self.in_time, self.out_time)
 
 
-class hdf_access(object):
-    """ A utility class to access data in hf5 format.
-        read method is used to load data from a preprocessed file.
-        The file format is a table with each column is a sensor and
-        each row an event
-    """
-
-    def __init__(self,path,file_name):
-        self.path = path
-        self.file_name = file_name
-
-    def read(self):
-        os.chdir(self.path)
-        self.data = pd.read_hdf(self.file_name,key='MC')
-
-        # Reads translated hf files (table with sensor/charge per event)
-        self.sensors = np.array(self.data.columns)
-        self.data = np.array(self.data, dtype = 'int32')
-        self.events = self.data.shape[0]
-
-        #returns data array, sensors vector, and number of events
-        return self.data,self.sensors,self.events
-
-
-
 class producer(object):
     """ Sends data to a given channel. DATA has 3 elements:
             Charge, in_time, out_time(0)

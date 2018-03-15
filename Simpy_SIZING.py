@@ -12,6 +12,7 @@ import os
 import multiprocessing as mp
 from functools import partial
 from SimLib import TOFPET
+from SimLib import HF_files as HF
 import time
 
 
@@ -71,7 +72,7 @@ def simulation(run,DATA,
 
 if __name__ == '__main__':
 
-    disk  = TOFPET.hdf_access(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
+    disk  = HF.hdf_access(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
                                 "p_SET_1.h5")
     DATA,sensors,n_events = disk.read()
     print (" NUMBER OF EVENTS IN SIMULATION: %d" % n_events)

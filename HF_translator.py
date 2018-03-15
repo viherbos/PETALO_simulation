@@ -84,7 +84,7 @@ class HF(object):
 
 def main():
 
-    for i in range(30):
+    for i in range(1):
         TEST_c = HF(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
                       "LXe_SiPM9mm2_xyz5cm_"+str(i)+".pet.h5",
                       "p_SET_" + str(i) + ".h5" )

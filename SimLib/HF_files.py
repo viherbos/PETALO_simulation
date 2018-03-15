@@ -5,7 +5,6 @@ import scipy as sp
 import matplotlib.pyplot as plt
 from simpy.events import AnyOf, AllOf, Event
 import sys
-import HF_translator as HFT
 import os
 import pandas as pd
 
@@ -37,9 +36,51 @@ class hdf_access(object):
 
 class hdf_compose(object):
     """ A utility class to access preprocessed data from MCs in hf5 format.
+            param
+            files   :   array of files
     """
 
-    def __init__(self,path,file_name,n_files):
+    def __init__(self,path,file_name,files,n_sensors):
         self.path       = path
         self.file_name  = file_name
-        self.n_files    = n_files
+        self.files      = files
+        self.n_sensors  = n_sensors
+        self.data       = np.array([]).reshape(0,self.n_sensors)
+        self.data_aux   = np.array([]).reshape(0,self.n_sensors)
+
+    def compose(self):
+
+        hf = hdf_access(self.path,self.file_name + str(self.files[0]) + ".h5")
+        self.data_aux,self.sensors,self.events = hf.read()
+        self.data = np.pad( self.data,
+                            ((self.events,0),(0,0)),
+                            mode='constant',
+                            constant_values=0)
+        self.data[0:self.events,:] = self.data_aux
+
+        for i in range(1,len(self.files)):
+            hf = hdf_access(self.path,self.file_name + str(self.files[i]) + ".h5")
+            self.data_aux,self.fake,self.events = hf.read()
+            self.data = np.pad( self.data,
+                                ((self.events,0),(0,0)),
+                                mode='constant',
+                                constant_values=0)
+            self.data[0:self.events,:] = self.data_aux
+
+
+        return self.data, self.sensors, self.data.shape[0]
+
+
+def main():
+
+    TEST_c = hdf_compose(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
+                           "p_SET_",[0,1,2,3],256)
+    a,b,c = TEST_c.compose()
+
+    print a
+    print b
+    print c
+
+
+if __name__ == "__main__":
+    main()

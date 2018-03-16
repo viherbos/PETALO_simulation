@@ -186,6 +186,7 @@ class FE_outlink(object):
         latency : Latency depends on output link speed
         log     : Stores time and number of FIFO elements
     """
+
     def __init__(self,env,out_stream,param,asic_id):
         self.env = env
         self.FIFO_out_size = param.FIFO_out_depth
@@ -234,12 +235,12 @@ class FE_asic(object):
         Parameters
         sensor_id : Array with the positions of the sensors being used (param.sensors)
     """
-    def __init__(self,env,param,data,n_ch,timing,sensor_id,asic_id):
+    def __init__(self,env,param,data,n_ch,timing,sensors,asic_id):
         self.env        = env
         self.Param      = param
         self.DATA       = data
         self.timing     = timing
-        self.sensors    = sensor_id
+        self.sensors    = sensors
         self.asic_id    = asic_id
         self.n_ch       = n_ch
         self.data_out   = np.array([]).reshape(0,6)
@@ -264,3 +265,19 @@ class FE_asic(object):
         for i in range(self.n_ch):
             self.Producer[i].out = self.Channels[i]
             self.Channels[i].out = self.Link
+
+
+    def __call__(self):
+        lostP,lostC = 0,0
+
+        for i in range(64):
+            lostP = lostP + self.Producer[i].lost
+            lostC = lostC + self.Channels[i].lost
+
+        output = {  'lostP':lostP,
+                    'lostC':lostC,
+                    'data_out':self.Link.out_stream,
+                    #'log':ASIC[0].Link.log
+                    }
+
+        return output

@@ -12,107 +12,130 @@ import os
 import multiprocessing as mp
 from functools import partial
 from SimLib import TOFPET
+from SimLib import HF_files as HF
 import time
 
 
-def simulation(run,DATA,
-               ch_rate,FE_outrate,
-               FIFO_depth,FIFO_out_depth,
-               FE_ch_latency,
-               TE, TGAIN, sensors, events):
+# def FE_sim(asic_id, DATA, timing, Param):
+#
+#     lostP,lostC = 0,0
+#
 
-    data_out = np.array([]).reshape(0,6)
-    lostP,lostC = 0,0
-    Param = TOFPET.parameters(
-                        ch_rate    = ch_rate,
-                        FE_outrate = FE_outrate,   # 2.6Gb/s - 80 bits ch
-                        FIFO_depth  = FIFO_depth,
-                        FIFO_out_depth = FIFO_out_depth,
-                        FE_ch_latency = FE_ch_latency,    # Max Wilkinson Latency
-                        TE = TE,
-                        TGAIN = TGAIN,
-                        sensors = sensors,
-                        events = events
-                        )
 
-    timing = np.random.randint(0,int(1E9/Param.ch_rate),size=events)
-    # All sensors are given the same timestamp in an events
-    sensor_id = range(64)
+#
+# ASIC = TOFPET.FE_asic(  env         = env,
+#                         param       = Param,
+#                         data        = DATA[:,asic_id*64:(asic_id+1)*64],
+#                         n_ch        = 64,
+#                         timing      = timing,
+#                         sensors     = sensors[asic_id*64:(asic_id+1)*64],
+#                         asic_id     = asic_id)
+#     env.run()
+#
+#     for i in range(64):
+#         lostP = lostP + ASIC.Producer[i].lost
+#         lostC = lostC + ASIC.Channels[i].lost
+#
+#
+#     output = {  'lostP':lostP,
+#                 'lostC':lostC,
+#                 'data_out':ASIC.Link.out_stream,
+#                 #'log':ASIC[0].Link.log
+#                 }
+#
+#     return output
+
+
+def FE_gen(threads,sim_info):
+
     env = simpy.Environment()
 
+    start_time = time.time()
 
-    ASIC_0 = TOFPET.FE_asic( env         = env,
-                            param       = Param,
-                            data        = DATA,
-                            n_ch        = 64,
-                            timing      = timing,
-                            sensor_id   = sensor_id,
-                            asic_id     = 0)
+    ASIC = [TOFPET.FE_asic(
+            env = env,
+            param       = sim_info['Param'],
+            data        = sim_info['DATA'][:,asic_id*64:(asic_id+1)*64],
+            n_ch        = 64,
+            timing      = sim_info['timing'],
+            sensors     = sim_info['Param'].sensors[asic_id*64:(asic_id+1)*64],
+            asic_id     = asic_id)
+                for asic_id in threads]
 
     env.run()
 
-    for i in range(64):
-        lostP = lostP + ASIC_0.Producer[i].lost
-        lostC = lostC + ASIC_0.Channels[i].lost
+    gen_output = [ASIC[i]() for i in range(len(threads))]
 
 
-    output = {  'lostP':lostP,
-                'lostC':lostC,
-                'log':ASIC_0.Link.log,
-                'data_out':ASIC_0.Link.out_stream
-                }
+    elapsed_time = time.time()-start_time
+    print ("IT TOOK %d SECONDS TO DO THIS" % elapsed_time)
 
-    return output
+    return gen_output
 
 
 
-if __name__ == '__main__':
+def FE_sim(asics, sim_info):
 
-    disk  = TOFPET.hdf_access(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
-                                "p_SET_1.h5")
-    DATA,sensors,n_events = disk.read()
-    print (" NUMBER OF EVENTS IN SIMULATION: %d" % n_events)
+    kargs = {'sim_info':sim_info}
 
-    runs = 32
-    latency = np.array([]).reshape(0,1)
+    FE_map = partial(FE_gen, **kargs)
 
     # Multiprocess Work
     pool_size = mp.cpu_count()
     pool = mp.Pool(processes=pool_size)
 
-    sim_info={    'DATA'          : DATA,
-                  'ch_rate'       : 300E3,
-                  'FE_outrate'    : (2.6E9/80)/2,
-                  'FIFO_depth'    : 4,
-                  'FIFO_out_depth': 64*4,
-                  'FE_ch_latency' : 5120,
-                  'TE' : 7,
-                  'TGAIN' : 1,
-                  'sensors' : sensors,
-                  'events' : n_events}
-
-    # 2.6Gb/s - 80 bits ch
-    # Max Wilkinson Latency
-
-    start_time = time.time()
-
-    mapfunc = partial(simulation, **sim_info)
-    pool_output = pool.map(mapfunc, (i for i in range(runs)))
+    pool_output = pool.map(FE_map, [[i] for i in asics])
 
     pool.close()
     pool.join()
+    # pool_output = FE_map([1])
+
+    return pool_output
 
 
 
-    lostP = [pool_output[j]['lostP'] for j in range(runs)]
-    lostC = [pool_output[j]['lostC'] for j in range(runs)]
-    outlink_ch = [ len(pool_output[j]['data_out'][:,0]) for j in range(runs)]
-    total_ch_event = np.array(outlink_ch).sum()
+if __name__ == '__main__':
 
-    print ("A total of %d events processed" % total_ch_event)
+    latency = np.array([]).reshape(0,1)
+    files = range(30)
+    A = HF.hdf_compose( "/home/viherbos/DAQ_DATA/NEUTRINOS/","p_SET_",files,256)
+    DATA,sensors,n_events = A.compose()
+    print (" NUMBER OF EVENTS IN SIMULATION: %d" % n_events)
 
-    for i in range(runs):
-        data_frame_array = pool_output[i]['data_out'][:,:]
+    Param = TOFPET.parameters(
+                        ch_rate    = 300E3,
+                        FE_outrate = (2.6E9/80)/2,   # 2.6Gb/s - 80 bits ch
+                        FIFO_depth  = 4,
+                        FIFO_out_depth = 64*4,
+                        FE_ch_latency = 5120,    # Max Wilkinson Latency
+                        TE = 7,
+                        TGAIN = 1,
+                        sensors = sensors,
+                        events = n_events
+                        )
+
+    timing = np.random.randint(0,int(1E9/Param.ch_rate),size=n_events)
+    # All sensors are given the same timestamp in an events
+
+    sim_info = {'DATA' : DATA, 'timing':timing, 'Param' : Param }
+
+    pool_output = FE_sim([0,1,2,3],sim_info)
+
+    print len(pool_output)
+    print pool_output[0][0]
+
+    asics = [0,1,2,3]
+    lostP = [pool_output[j][0]['lostP'] for j in asics]
+    # Total FIFO Drops on Producer stage
+    lostC = [pool_output[j][0]['lostC'] for j in asics]
+    # Total FIFO Drops on Outlink stage
+    outlink_ch = [ len(pool_output[j][0]['data_out'][:,0]) for j in asics]
+    # Number of data frames (channels) recovered at the output of each asic
+
+    print ("A total of %d events processed" % np.array(outlink_ch).sum())
+
+    for i in asics:
+        data_frame_array = pool_output[i][0]['data_out'][:,:]
 
         in_time_array  = data_frame_array[:,4]
         out_time_array = data_frame_array[:,5]
@@ -124,8 +147,7 @@ if __name__ == '__main__':
         latency[0:len(latency_aux),0] = latency_aux
 
 
-    elapsed_time = time.time()-start_time
-    print ("IT TOOK %d SECONDS TO DO THIS" % elapsed_time)
+
 
 
     fit = fit_library.gauss_fit()
@@ -161,21 +183,3 @@ if __name__ == '__main__':
     plt.plot(x_data,y_data)
     plt.ylim((0.9,1.0))
     plt.show()
-
-
-
-
-#     output = mapfunc(1,**sim_info)
-#
-# print ("\n --------------------------------- \n")
-# print ("FE Input Lost Events %d / Recovered Events %d\n" % (output['lostP'],
-#                                                             len(output['data_out'])))
-# print ("------------------------------------ \n")
-#
-# print ("\n --------------------------------- \n")
-# print ("FE Output Lost Events %d / Recovered Events %d\n" % (output['lostC'],
-#                                                             len(output['data_out'])))
-# print ("------------------------------------ \n")
-
-# plt.plot(output['log'][:,1],output['log'][:,0])
-# plt.show()

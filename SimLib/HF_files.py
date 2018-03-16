@@ -7,6 +7,7 @@ from simpy.events import AnyOf, AllOf, Event
 import sys
 import os
 import pandas as pd
+import time
 
 
 
@@ -38,6 +39,10 @@ class hdf_compose(object):
     """ A utility class to access preprocessed data from MCs in hf5 format.
             param
             files   :   array of files
+            Output
+            composed data
+            sensor array
+            number of events 
     """
 
     def __init__(self,path,file_name,files,n_sensors):
@@ -73,13 +78,18 @@ class hdf_compose(object):
 
 def main():
 
+    start = time.time()
+
+    files = range(30)
+
     TEST_c = hdf_compose(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
-                           "p_SET_",[0,1,2,3],256)
+                           "p_SET_",files,256)
     a,b,c = TEST_c.compose()
 
-    print a
-    print b
-    print c
+    time_elapsed = time.time() - start
+
+    print ("It took %d seconds to compose %d files" % (time_elapsed,
+                                                       len(files)))
 
 
 if __name__ == "__main__":

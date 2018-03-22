@@ -81,7 +81,7 @@ def FE_sim(asics, sim_info):
     FE_map = partial(FE_gen, **kargs)
 
     # Multiprocess Work
-    pool_size = mp.cpu_count()
+    pool_size = mp.cpu_count()//2
     pool = mp.Pool(processes=pool_size)
 
     pool_output = pool.map(FE_map, [[i] for i in asics])
@@ -97,7 +97,7 @@ def FE_sim(asics, sim_info):
 if __name__ == '__main__':
 
     latency = np.array([]).reshape(0,1)
-    files = range(30)
+    files = range(5)
     A = HF.hdf_compose( "/home/viherbos/DAQ_DATA/NEUTRINOS/","p_SET_",files,256)
     DATA,sensors,n_events = A.compose()
     print (" NUMBER OF EVENTS IN SIMULATION: %d" % n_events)

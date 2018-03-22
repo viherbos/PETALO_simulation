@@ -38,11 +38,12 @@ class hdf_access(object):
 class hdf_compose(object):
     """ A utility class to access preprocessed data from MCs in hf5 format.
             param
-            files   :   array of files
+            files           : Array of files
+            n_sensors       : Number of sensors (all of them)
             Output
             composed data
             sensor array
-            number of events 
+            number of events
     """
 
     def __init__(self,path,file_name,files,n_sensors):
@@ -63,8 +64,8 @@ class hdf_compose(object):
                             constant_values=0)
         self.data[0:self.events,:] = self.data_aux
 
-        for i in range(1,len(self.files)):
-            hf = hdf_access(self.path,self.file_name + str(self.files[i]) + ".h5")
+        for i in self.files:
+            hf = hdf_access(self.path,self.file_name + str(i) + ".h5")
             self.data_aux,self.fake,self.events = hf.read()
             self.data = np.pad( self.data,
                                 ((self.events,0),(0,0)),
@@ -80,10 +81,10 @@ def main():
 
     start = time.time()
 
-    files = range(30)
+    files = [0,1,2,3,4,5,6,8]
 
-    TEST_c = hdf_compose(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
-                           "p_SET_",files,256)
+    TEST_c = hdf_compose(  "/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
+                           "p_FRSET_",files,1536)
     a,b,c = TEST_c.compose()
 
     time_elapsed = time.time() - start

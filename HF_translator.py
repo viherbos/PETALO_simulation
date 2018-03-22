@@ -76,6 +76,9 @@ class HF(object):
                         count += 1
                         count_a += 1
 
+            # Ask PAOLA about the channel grouping (SiPM -> ASIC)+++++
+            # or change ASIC grouping here (ARGHH!!!)
+            
             low_limit = high_limit+1
             #print ("EVENT %d processed" % i)
             count_a = 0
@@ -84,10 +87,20 @@ class HF(object):
 
 def main():
 
-    for i in range(1):
-        TEST_c = HF(  "/home/viherbos/DAQ_DATA/NEUTRINOS/",
-                      "LXe_SiPM9mm2_xyz5cm_"+str(i)+".pet.h5",
-                      "p_SET_" + str(i) + ".h5" )
+    # for i in range(1):
+    #     TEST_c = HF(  "/home/viherbos/DAQ_DATA/NEUTRINOS/PETit",
+    #                   "LXe_SiPM9mm2_xyz5cm_"+str(i)+".pet.h5",
+    #                   "p_SET_" + str(i) + ".h5" )
+    #     TEST_c.read()
+    #     TEST_c.process()
+    #     TEST_c.write()
+    #
+    #     print ("%d files processed" % i)
+
+    for i in [0,1,2,3,4,5,6,8]:
+        TEST_c = HF(  "/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
+                      "full_ring_SiPM9mm2."+str(i)+".pet.h5",
+                      "p_FRSET_" + str(i) + ".h5" )
         TEST_c.read()
         TEST_c.process()
         TEST_c.write()

@@ -1,5 +1,11 @@
 import json
 import os
+import numpy as np
+import sys
+import pandas as pd
+
+
+
 
 class SIM_DATA(object):
 
@@ -12,20 +18,22 @@ class SIM_DATA(object):
             self.config_read()
         else:
             # These are default values.
-            self.data= {'ENVIROMENT':{'ch_rate'    :300E3,
-                                      'temperature':300},
-                        'TOPOLOGY':{'n_rings':1,
-                                    'n_detectors':2,
-                                    'n_faces':2,
-                                    'n_sipm_face':64,
-                                    'n_asics':8},
-                        'TOFPET':{'n_channels':64,
-                                  'outlink_rate':(2.6E9/80)/2,
-                                  'IN_FIFO_depth':4,
-                                  'OUT_FIFO_depth':64*4,
-                                  'MAX_WILKINSON_LATENCY':5120,
-                                  'TE':7,
-                                  'TGAIN':1}
+            self.data= {'ENVIROMENT'  :{'ch_rate'     :300E3,
+                                        'temperature' :300},
+                        'SIPM'        :{'size'        :[1,3,3]},
+                        'TOPOLOGY'    :{'radius_int'   :150,
+                                        'radius_ext'   :200,
+                                        'sipm_int_row':np.pi*2*150//3,
+                                        'sipm_ext_row':np.pi*2*200//3,
+                                        'n_rows'      :8
+                                        },
+                        'TOFPET'      :{'n_channels'  :64,
+                                        'outlink_rate':(2.6E9/80)/2,
+                                        'IN_FIFO_depth':4,
+                                        'OUT_FIFO_depth':64*4,
+                                        'MAX_WILKINSON_LATENCY':5120,
+                                        'TE':7,
+                                        'TGAIN':1}
                        }
         self.config_write()
 
@@ -44,6 +52,8 @@ class SIM_DATA(object):
         except IOError as e:
             print(e)
 
+
+
 if __name__ == '__main__':
     SIM=SIM_DATA(read=False)
-    print SIM.data['TOFPET']['TE']
+    print SIM.data

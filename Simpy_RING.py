@@ -17,34 +17,6 @@ import time
 from SimLib import config_sim as CFG
 from SimLib import pet_graphics as PG
 
-# def FE_sim(asic_id, DATA, timing, Param):
-#
-#     lostP,lostC = 0,0
-#
-
-
-#
-# ASIC = TOFPET.FE_asic(  env         = env,
-#                         param       = Param,
-#                         data        = DATA[:,asic_id*64:(asic_id+1)*64],
-#                         n_ch        = 64,
-#                         timing      = timing,
-#                         sensors     = sensors[asic_id*64:(asic_id+1)*64],
-#                         asic_id     = asic_id)
-#     env.run()
-#
-#     for i in range(64):
-#         lostP = lostP + ASIC.Producer[i].lost
-#         lostC = lostC + ASIC.Channels[i].lost
-#
-#
-#     output = {  'lostP':lostP,
-#                 'lostC':lostC,
-#                 'data_out':ASIC.Link.out_stream,
-#                 #'log':ASIC[0].Link.log
-#                 }
-#
-#     return output
 
 
 def FE_gen(threads,sim_info):
@@ -111,7 +83,7 @@ if __name__ == '__main__':
     DATA,sensors,n_events = A.compose()
 
     SHOW = PG.DET_SHOW(CG.data)
-    SHOW("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/","p_FRSET_0.h5",0,True,False)
+    # SHOW("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/","p_FRSET_0.h5",0,True,False)
 
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 

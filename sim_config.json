@@ -1,6 +1,6 @@
 {
     "ENVIRONMENT": {
-        "ch_rate": 400000.0, 
+        "ch_rate": 1000000.0, 
         "temperature": 300
     }, 
     "SIPM": {
@@ -12,18 +12,18 @@
     }, 
     "TOFPET": {
         "TGAIN": 1, 
-        "MAX_WILKINSON_LATENCY": 5120, 
+        "TE": 3, 
         "outlink_rate": 16250000.0, 
         "OUT_FIFO_depth": 256, 
         "n_channels": 64, 
         "IN_FIFO_depth": 4, 
-        "TE": 1
+        "MAX_WILKINSON_LATENCY": 5120
     }, 
     "TOPOLOGY": {
         "radius_ext": 158, 
         "n_rows": 8, 
         "sipm_ext_row": 96, 
-        "sipm_int_row": 96, 
-        "radius_int": 108
+        "radius_int": 108, 
+        "sipm_int_row": 96
     }
 }

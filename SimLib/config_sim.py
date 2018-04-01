@@ -18,13 +18,13 @@ class SIM_DATA(object):
             self.config_read()
         else:
             # These are default values.
-            self.data= {'ENVIROMENT'  :{'ch_rate'     :300E3,
+            self.data= {'ENVIRONMENT'  :{'ch_rate'     :1000E3,
                                         'temperature' :300},
                         'SIPM'        :{'size'        :[1,3,3]},
-                        'TOPOLOGY'    :{'radius_int'   :150,
-                                        'radius_ext'   :200,
-                                        'sipm_int_row':np.pi*2*150//3,
-                                        'sipm_ext_row':np.pi*2*200//3,
+                        'TOPOLOGY'    :{'radius_int'   :108,
+                                        'radius_ext'   :158,
+                                        'sipm_int_row':12*8,
+                                        'sipm_ext_row':12*8,
                                         'n_rows'      :8
                                         },
                         'TOFPET'      :{'n_channels'  :64,
@@ -32,7 +32,7 @@ class SIM_DATA(object):
                                         'IN_FIFO_depth':4,
                                         'OUT_FIFO_depth':64*4,
                                         'MAX_WILKINSON_LATENCY':5120,
-                                        'TE':7,
+                                        'TE':3,
                                         'TGAIN':1}
                        }
         self.config_write()

@@ -159,7 +159,7 @@ class DET_SHOW(object):
 
         os.chdir(path)
         self.sensors = pd.read_hdf(file_name,key='sensors')
-        print self.sensors
+        #print self.sensors
         self.positions = np.array(self.sensors)
 
         data = pd.read_hdf(file_name,key='MC')
@@ -194,4 +194,4 @@ if __name__ == '__main__':
     print SIM.data
     A = DET_SHOW(SIM.data)
     for i in range(0,100):
-        A("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/", "p_FRSET_0.h5",i,False,True)
+        A("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/", "p_FRSET_0.h5",i,True,False)

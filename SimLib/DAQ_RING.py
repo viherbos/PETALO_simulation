@@ -23,8 +23,8 @@ class parameters(object):
 
     def __init__(self,ch_rate,FE_outrate,
                  FIFO_depth,FIFO_out_depth,
-                 FE_ch_latency,TE,TGAIN,
-                 sensors,events):
+                 FE_ch_latency,TE,TGAIN,FE_n_channels,
+                 sensors,events,L1_outrate,FIFO_L1_depth,n_asics):
         self.ch_rate     = ch_rate
         self.FE_outrate  = FE_outrate
         self.FIFO_depth  = FIFO_depth
@@ -32,8 +32,12 @@ class parameters(object):
         self.events      = events
         self.FIFO_out_depth = FIFO_out_depth
         self.FE_ch_latency  = FE_ch_latency      # Maximum Ch Latency
-        self.TE        = TE
+        self.TE         = TE
         self.TGAIN      = TGAIN
+        self.FE_n_channels = FE_n_channels
+        self.L1_outrate = L1_outrate
+        self.FIFO_L1_depth = FIFO_L1_depth
+        self.n_asics = n_asics
 
 
 class ch_frame(object):
@@ -175,7 +179,6 @@ class FE_channel(object):
             self.lost = self.out.put(self.packet,self.lost)
 
 
-
 class FE_outlink(object):
     """ ASIC Outlink model.
         Method
@@ -187,15 +190,16 @@ class FE_outlink(object):
         log     : Stores time and number of FIFO elements
     """
 
-    def __init__(self,env,out_stream,param,asic_id):
+    def __init__(self,env,param,asic_id):
         self.env = env
         self.FIFO_out_size = param.FIFO_out_depth
         self.res = simpy.Store(self.env,capacity=self.FIFO_out_size)
         self.action = env.process(self.run())
-        self.out_stream = out_stream
         self.latency = int(1E9/param.FE_outrate)
         self.log = np.array([]).reshape(0,2)
         self.asic_id = asic_id
+        self.out = None
+        self.lost = 0
 
     def print_stats(self):
         #print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
@@ -216,16 +220,62 @@ class FE_outlink(object):
 
     def run(self):
         while True:
+            self.packet = yield self.res.get()
             yield self.env.timeout(self.latency)
-            self.msg = yield self.res.get()
-            self.msg[5] = self.env.now
-            #self.print_stats()
-            self.out_stream = np.pad(self.out_stream,((1,0),(0,0)),
-                                    mode='constant',
-                                    constant_values=0)
-            self.out_stream[0,:] = self.msg
-            #np.vstack([self.out_stream,self.msg])
-            #vstack too slow
+            self.lost = self.out.put(self.packet,self.lost)
+
+
+
+# class FE_outlink_old(object):
+#     """ ASIC Outlink model.
+#         Method
+#         put     : Output link FIFO storing method
+#         Parameters
+#         env     : Simpy environment
+#         FIFO_out_size : Size of output FIFO
+#         latency : Latency depends on output link speed
+#         log     : Stores time and number of FIFO elements
+#     """
+#
+#     def __init__(self,env,out_stream,param,asic_id):
+#         self.env = env
+#         self.FIFO_out_size = param.FIFO_out_depth
+#         self.res = simpy.Store(self.env,capacity=self.FIFO_out_size)
+#         self.action = env.process(self.run())
+#         self.out_stream = out_stream
+#         self.latency = int(1E9/param.FE_outrate)
+#         self.log = np.array([]).reshape(0,2)
+#         self.asic_id = asic_id
+#
+#     def print_stats(self):
+#         #print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
+#         self.log=np.vstack([self.log,[len(self.res.items),self.env.now]])
+#         # FIFO Statistics
+#
+#     def put(self,data,lost):
+#         try:
+#             if (len(self.res.items)<self.FIFO_out_size):
+#                 self.res.put(data)
+#                 #self.print_stats()
+#                 return lost
+#             else:
+#                 raise Full('OUT LINK FIFO is FULL')
+#         except Full as e:
+#             #print ("TIME: %s // %s" % (self.env.now,e.value))
+#             return (lost+1)
+#
+#     def run(self):
+#         while True:
+#             yield self.env.timeout(self.latency)
+#             self.msg = yield self.res.get()
+#             self.msg[5] = self.env.now
+#             #self.print_stats()
+#             self.out_stream = np.pad(self.out_stream,((1,0),(0,0)),
+#                                     mode='constant',
+#                                     constant_values=0)
+#             self.out_stream[0,:] = self.msg
+#             #np.vstack([self.out_stream,self.msg])
+#             #vstack too slow
 
 
 class FE_asic(object):
@@ -235,15 +285,15 @@ class FE_asic(object):
         Parameters
         sensor_id : Array with the positions of the sensors being used (param.sensors)
     """
-    def __init__(self,env,param,data,n_ch,timing,sensors,asic_id):
+    def __init__(self,env,param,data,timing,sensors,asic_id):
         self.env        = env
         self.Param      = param
         self.DATA       = data
         self.timing     = timing
         self.sensors    = sensors
         self.asic_id    = asic_id
-        self.n_ch       = n_ch
-        self.data_out   = np.array([]).reshape(0,6)
+        self.n_ch       = param.FE_n_channels
+
 
         # System Instanciation and Wiring
         self.Producer = [producer(   self.env,
@@ -258,7 +308,6 @@ class FE_asic(object):
                                 sensor_id = self.sensors[i])
                                             for i in range(self.n_ch)]
         self.Link     = FE_outlink(  self.env,
-                                self.data_out,
                                 self.Param,
                                 asic_id = self.asic_id)
 
@@ -267,16 +316,96 @@ class FE_asic(object):
             self.Channels[i].out = self.Link
 
 
-    def __call__(self):
-        lostP,lostC = 0,0
 
-        for i in range(64):
-            lostP = lostP + self.Producer[i].lost
-            lostC = lostC + self.Channels[i].lost
+class L1(object):
+    """ L1 model.
+        Methods
+
+        Parameters
+
+    """
+    def __init__(self,env,out_stream,param,L1_id):
+        self.env        = env
+        self.Param      = param
+        self.L1_id      = L1_id
+        self.out_stream = out_stream
+        self.latency = int(1E9/param.L1_outrate)
+        self.res = simpy.Store(self.env,capacity=param.FIFO_L1_depth)
+        self.action = env.process(self.run())
+
+
+    def put(self,data,lost):
+        try:
+            if (len(self.res.items)<self.Param.FIFO_L1_depth):
+                self.res.put(data)
+                #self.print_stats()
+                return lost
+            else:
+                raise Full('L1 FIFO is FULL')
+        except Full as e:
+            #print ("TIME: %s // %s" % (self.env.now,e.value))
+            return (lost+1)
+
+    def run(self):
+        while True:
+            yield self.env.timeout(self.latency)
+            self.msg = yield self.res.get()
+            self.msg[5] = self.env.now
+            #self.print_stats()
+            self.out_stream = np.pad(self.out_stream,((1,0),(0,0)),
+                                    mode='constant',
+                                    constant_values=0)
+            self.out_stream[0,:] = self.msg
+
+
+
+class L1_hierarchy(object):
+
+
+    def __init__(self,env,param,DATA,timing,sensors,L1_id):
+        self.env        = env
+        self.param      = param
+        self.data_out   = np.array([]).reshape(0,6)
+        self.block_size = param.FE_n_channels
+
+        self.L1    = L1( env        = self.env,
+                         out_stream = self.data_out,
+                         param      = self.param,
+                         L1_id      = L1_id)
+
+        self.ASICS = [FE_asic( self.env,
+                               param = self.param,
+                               data  = DATA[:,i*self.block_size:(i+1)*self.block_size],
+                               timing = timing,
+                               sensors = sensors[i*self.block_size:(i+1)*self.block_size],
+                               asic_id = i)
+                               for i in range(self.param.n_asics)]
+
+        for i in range(self.param.n_asics):
+            self.ASICS[i].Link.out = self.L1
+
+
+    def __call__(self):
+        lostP = np.array([]).reshape(0,1)
+        lostC = np.array([]).reshape(0,1)
+        lostL1 = np.array([]).reshape(0,1)
+
+        for j in range(self.param.n_asics):
+            for i in range(self.param.FE_n_channels):
+                lostP = np.pad(lostP,((1,0),(0,0)), mode='constant', constant_values=0)
+                lostC = np.pad(lostC,((1,0),(0,0)), mode='constant', constant_values=0)
+                lostP[0,:] = self.ASICS[j].Producer[i].lost
+                lostC[0,:] = self.ASICS[j].Channels[i].lost
+                #lostP = lostP + self.ASICS[j].Producer[i].lost
+                #lostC = lostC + self.ASICS[j].Channels[i].lost
+            lostL1 = np.pad(lostL1,((1,0),(0,0)), mode='constant', constant_values=0)
+            lostL1[0,:] = self.ASICS[j].Link.lost
+            #lostL1 = lostL1 + self.ASICS[j].Link.lost
 
         output = {  'lostP':lostP,
                     'lostC':lostC,
-                    'data_out':self.Link.out_stream,
+                    'lostL1':lostL1,
+                    'data_out':self.L1.out_stream
                     #'log':ASIC[0].Link.log
                     }
 

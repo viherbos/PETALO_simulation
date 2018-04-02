@@ -11,13 +11,13 @@ import config_sim as conf
 
 
 class GLTextItem(GLGraphicsItem):
-    def __init__(self, X=None, Y=None, Z=None, text=None):
+    def __init__(self, X=None, Y=None, Z=None, text=None, size=7):
         GLGraphicsItem.__init__(self)
-
         self.text = text
         self.X = X
         self.Y = Y
         self.Z = Z
+        self.size = size
 
     def setGLViewWidget(self, GLViewWidget):
         self.GLViewWidget = GLViewWidget
@@ -40,7 +40,7 @@ class GLTextItem(GLGraphicsItem):
 
     def paint(self):
         self.GLViewWidget.qglColor(QtCore.Qt.white)
-        self.myFont = QtGui.QFont("Helvetica", 7);
+        self.myFont = QtGui.QFont("Helvetica", self.size);
 
         self.GLViewWidget.renderText(self.X, self.Y, self.Z, self.text,self.myFont)
 
@@ -152,22 +152,22 @@ class DET_SHOW(object):
             self.w.addItem(t)
 
 
-    def __call__(self,path,file_name,event,ident=False,show_photons=True):
+    def __call__(self,sensors,data,event,ident=False,show_photons=True):
         items = []
         for i in list(self.w.items):
             self.w.removeItem(i)
 
-        os.chdir(path)
-        self.sensors = pd.read_hdf(file_name,key='sensors')
+        #os.chdir(path)
+        #self.sensors = pd.read_hdf(file_name,key='sensors')
         #print self.sensors
-        self.positions = np.array(self.sensors)
+        #self.positions = np.array(self.sensors)
+        #data = pd.read_hdf(file_name,key='MC')
+        #data = np.array(data, dtype = 'int32')
 
-        data = pd.read_hdf(file_name,key='MC')
-        data = np.array(data, dtype = 'int32')
         max_light = float(data[event,:].max())
 
         count=0
-        for i in self.positions:
+        for i in sensors:
             color = int((data[event,count]/max_light)*200.0)
             #print color
             self.SiPM_QT(i[1:].transpose(),
@@ -178,9 +178,11 @@ class DET_SHOW(object):
                          show_photons=show_photons
                          )
             count+=1
-        # p = np.array([1,1,1])
-        # p = p.transpose()
-        # self.SiPM_QT(p,0)
+
+        t = GLTextItem( X=0, Y=0, Z=0, text=str(event), size=12)
+        t.setGLViewWidget(self.w)
+        self.w.addItem(t)
+
         self.w.opts['distance']=500
         self.w.show()
 
@@ -193,5 +195,12 @@ if __name__ == '__main__':
     SIM=conf.SIM_DATA(read=False)
     print SIM.data
     A = DET_SHOW(SIM.data)
+
+    os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")
+    filename = "p_FRSET_0.h5"
+
+    positions = np.array(pd.read_hdf(filename,key='sensors'))
+    data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
+
     for i in range(0,100):
-        A("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/", "p_FRSET_0.h5",i,True,False)
+        A(positions,data,i,False,True)

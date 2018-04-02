@@ -16,7 +16,7 @@ from SimLib import HF_files as HF
 import time
 from SimLib import config_sim as CFG
 from SimLib import pet_graphics as PG
-
+import pandas as pd
 
 
 def DAQ_gen(threads,sim_info):
@@ -210,11 +210,8 @@ if __name__ == '__main__':
     plt.show()
 
 
-    # write_HF = HFT.HF(  path = "/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
-    #                     in_file = "full_ring_SiPM9mm2.0.pet.h5",
-    #                     out_file = "daq_processed.h5")
-    # print data.shape
-    # write_HF.out_table = data
-    # print sensors.shape
-    # write_HF.sensors = sensors
-    # write_HF.write()
+    DAQ_dump = HF.daq_out(  "/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
+                            "daq_output.h5",
+                            "p_FRSET_0.h5",
+                            data)
+    DAQ_dump.write()

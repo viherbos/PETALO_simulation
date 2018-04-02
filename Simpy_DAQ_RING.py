@@ -87,7 +87,11 @@ if __name__ == '__main__':
     DATA = DATA[0:1000,:]
 
     SHOW = PG.DET_SHOW(CG.data)
-    # SHOW("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/","p_FRSET_0.h5",0,True,False)
+    os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")
+    filename = "p_FRSET_0.h5"
+    positions = np.array(pd.read_hdf(filename,key='sensors'))
+    data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
+    SHOW(positions,data,0,True,False)
 
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -210,8 +214,7 @@ if __name__ == '__main__':
     plt.show()
 
 
-    DAQ_dump = HF.daq_out(  "/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
+    DAQ_dump = HF.DAQ_IO("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
                             "daq_output.h5",
-                            "p_FRSET_0.h5",
-                            data)
-    DAQ_dump.write()
+                            "p_FRSET_0.h5")
+    DAQ_dump.write(data)

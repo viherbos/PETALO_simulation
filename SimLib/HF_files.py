@@ -10,29 +10,37 @@ import pandas as pd
 import time
 
 
-class daq_out(object):
+class DAQ_IO(object):
 
-    def __init__(self,path,out_filename,ref_filename,data):
+    def __init__(self,path,daq_filename,ref_filename):
         self.path = path
-        self.out_filename = out_filename
+        self.out_filename = daq_filename
         self.ref_filename = ref_filename
-        self.data = data
-
-    def write(self):
+        os.chdir(self.path)
+        self.sensors_xyz = np.array( pd.read_hdf(self.ref_filename,
+                                    key='sensors'),
+                                    dtype = 'float32')
+    def write(self,data):
         os.chdir(self.path)
         with pd.HDFStore(self.out_filename) as store:
-            panel_array = pd.DataFrame( data = self.data,
+            panel_array = pd.DataFrame( data = data,
                                         columns = ['data','event','sensor_id',
                                                     'asic_id','in_time','out_time'])
-            sensors_xyz = np.array( pd.read_hdf(self.ref_filename,
-                                        key='sensors'),
-                                        dtype = 'float32')
-            sensors_array = pd.DataFrame( data=sensors_xyz,
+            sensors_array = pd.DataFrame( data=self.sensors_xyz,
                                           columns=['sensor','x','y','z'])
             # complevel and complib are not compatible with MATLAB
             store.put('MC',panel_array)
             store.put('sensors',sensors_array)
             store.close()
+
+    def read(self):
+        os.chdir(self.path)
+        data = np.array(pd.read_hdf(self.out_filename,key='MC'), dtype='int32')
+        sensors = np.array(np.array(pd.read_hdf(self.out_filename,key='sensors'),
+                  dtype='int32'))
+
+        return data,sensors
+
 
 class hdf_access(object):
     """ A utility class to access data in hf5 format.

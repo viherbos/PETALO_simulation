@@ -226,58 +226,6 @@ class FE_outlink(object):
 
 
 
-# class FE_outlink_old(object):
-#     """ ASIC Outlink model.
-#         Method
-#         put     : Output link FIFO storing method
-#         Parameters
-#         env     : Simpy environment
-#         FIFO_out_size : Size of output FIFO
-#         latency : Latency depends on output link speed
-#         log     : Stores time and number of FIFO elements
-#     """
-#
-#     def __init__(self,env,out_stream,param,asic_id):
-#         self.env = env
-#         self.FIFO_out_size = param.FIFO_out_depth
-#         self.res = simpy.Store(self.env,capacity=self.FIFO_out_size)
-#         self.action = env.process(self.run())
-#         self.out_stream = out_stream
-#         self.latency = int(1E9/param.FE_outrate)
-#         self.log = np.array([]).reshape(0,2)
-#         self.asic_id = asic_id
-#
-#     def print_stats(self):
-#         #print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
-#         self.log=np.vstack([self.log,[len(self.res.items),self.env.now]])
-#         # FIFO Statistics
-#
-#     def put(self,data,lost):
-#         try:
-#             if (len(self.res.items)<self.FIFO_out_size):
-#                 self.res.put(data)
-#                 #self.print_stats()
-#                 return lost
-#             else:
-#                 raise Full('OUT LINK FIFO is FULL')
-#         except Full as e:
-#             #print ("TIME: %s // %s" % (self.env.now,e.value))
-#             return (lost+1)
-#
-#     def run(self):
-#         while True:
-#             yield self.env.timeout(self.latency)
-#             self.msg = yield self.res.get()
-#             self.msg[5] = self.env.now
-#             #self.print_stats()
-#             self.out_stream = np.pad(self.out_stream,((1,0),(0,0)),
-#                                     mode='constant',
-#                                     constant_values=0)
-#             self.out_stream[0,:] = self.msg
-#             #np.vstack([self.out_stream,self.msg])
-#             #vstack too slow
-
-
 class FE_asic(object):
     """ ASIC model.
         Method

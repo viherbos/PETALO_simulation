@@ -10,26 +10,26 @@
             3
         ]
     }, 
+    "TOPOLOGY": {
+        "radius_ext": 158, 
+        "n_rows": 8, 
+        "sipm_ext_row": 96, 
+        "radius_int": 108, 
+        "sipm_int_row": 96
+    }, 
+    "TOFPET": {
+        "TGAIN": 1, 
+        "TE": 6, 
+        "outlink_rate": 16250000.0, 
+        "OUT_FIFO_depth": 256, 
+        "n_channels": 64, 
+        "IN_FIFO_depth": 4, 
+        "MAX_WILKINSON_LATENCY": 5120
+    }, 
     "L1": {
         "L1_outrate": 50000000.0, 
         "n_asics": 8, 
         "n_L1": 3, 
         "FIFO_L1_depth": 512
-    }, 
-    "TOFPET": {
-        "TGAIN": 1, 
-        "MAX_WILKINSON_LATENCY": 5120, 
-        "outlink_rate": 16250000.0, 
-        "OUT_FIFO_depth": 256, 
-        "n_channels": 64, 
-        "IN_FIFO_depth": 4, 
-        "TE": 6
-    }, 
-    "TOPOLOGY": {
-        "radius_ext": 158, 
-        "n_rows": 8, 
-        "sipm_ext_row": 96, 
-        "sipm_int_row": 96, 
-        "radius_int": 108
     }
 }

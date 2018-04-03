@@ -28,32 +28,37 @@ if __name__ == '__main__':
     order = np.argsort(data[:,4])
     data_ordered = data[order,:]
 
-    print data_ordered[:10,:]
-
-    # Event Extraction
-    timestamp = data_ordered[0,4]
-    index = np.argwhere(data_ordered[:,4]==timestamp)
-
-
-    event = data_ordered[index[:,0]]
+    # Event Extraction only active sensors
+    event_pointer = 0
+    events = 5000
+    QDC_table = np.zeros((events,sensors.shape[0]))
 
 
-    # Sensor positions
-    os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")
-    filename = "p_FRSET_0.h5"
-    positions = np.array(pd.read_hdf(filename,key='sensors'))
+    for j in range(events):
+        timestamp = data_ordered[event_pointer,4]
+        index = np.argwhere(data_ordered[:,4]==timestamp)
+        event = data_ordered[index[:,0]]
+        event_pointer += event.shape[0]
 
-    active_positions=np.array([]).reshape(0,4)
-    for i in event[:,2]:
-        active_positions = np.pad(active_positions,((0,1),(0,0)),
-                                                    mode='constant',
-                                                    constant_values=0)
-        index = np.argwhere(positions[:,0]==i)
-        active = positions[index[:,0]]
-        active_positions[-1,:] = active[0,:]
+        positions = sensors
 
-    print active_positions
+        active_positions=np.array([]).reshape(0,4)
 
-    event_data = event[:,0].reshape(1,len(event[:,0]))
-    print event_data.shape
-    SHOW(active_positions,event_data,0,False,True)
+        pos = 0
+        for i in event[:,2]:
+            active_positions = np.pad(active_positions,((0,1),(0,0)),
+                                                        mode='constant',
+                                                        constant_values=0)
+            index = np.argwhere(positions[:,0]==i)
+            active = positions[index[:,0]]
+            active_positions[-1,:] = active[0,:]
+
+            QDC_table[j,index[:,0]] =  event[pos,0]
+            pos+=1
+
+        event_data = event[:,0].reshape(1,len(event[:,0]))
+
+        #SHOW(active_positions,event_data,0,False,True)
+
+    for i in range(20):
+        SHOW(sensors,QDC_table,i,False,True)

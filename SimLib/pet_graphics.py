@@ -202,5 +202,6 @@ if __name__ == '__main__':
     positions = np.array(pd.read_hdf(filename,key='sensors'))
     data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
 
-    for i in range(0,100):
-        A(positions,data,i,False,True)
+    # for i in range(0,100):
+    #     A(positions,data,i,False,True)
+    A(positions,data,0,True,False)

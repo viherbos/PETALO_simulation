@@ -18,6 +18,7 @@ class SIM_DATA(object):
             self.config_read()
         else:
             # These are default values.
+            # L1 output data frame = QDC[10] + TDC[10] + SiPM[20] = 40 bits
             self.data= {'ENVIRONMENT'  :{'ch_rate'     :1000E3,
                                         'temperature' :300},
                         'SIPM'        :{'size'        :[1,3,3]},
@@ -34,8 +35,8 @@ class SIM_DATA(object):
                                         'MAX_WILKINSON_LATENCY':5120,
                                         'TE':6,
                                         'TGAIN':1},
-                        'L1'          :{'L1_outrate'    :(2.0E9/40),
-                                        'FIFO_L1_depth' :512,
+                        'L1'          :{'L1_outrate'    :(1.0E9/40),
+                                        'FIFO_L1_depth' :1024,
                                         'n_asics'       :8,
                                         'n_L1'          :3 }
                        }

@@ -11,15 +11,28 @@ import time
 
 
 class DAQ_IO(object):
+    """ H5 access for DAQ.
+        Methods
+        write       : Writes H5 with output dataframes from DAQ (see DATA FRAME)
+                      Also attaches a table with sensor positions
+        read        : Reads DAQ output frames from H5 file
+        write_out   : Writes processed output frames. The output format is the
+                      same of the input processed H5 (Table with Sensors as columns
+                      and events as rows)
+        Parameters
 
-    def __init__(self,path,daq_filename,ref_filename):
+    """
+
+    def __init__(self,path,daq_filename,ref_filename,daq_outfile):
         self.path = path
         self.out_filename = daq_filename
         self.ref_filename = ref_filename
+        self.daq_outfile = daq_outfile
         os.chdir(self.path)
         self.sensors_xyz = np.array( pd.read_hdf(self.ref_filename,
                                     key='sensors'),
                                     dtype = 'float32')
+
     def write(self,data):
         os.chdir(self.path)
         with pd.HDFStore(self.out_filename) as store:
@@ -38,8 +51,20 @@ class DAQ_IO(object):
         data = np.array(pd.read_hdf(self.out_filename,key='MC'), dtype='int32')
         sensors = np.array(np.array(pd.read_hdf(self.out_filename,key='sensors'),
                   dtype='int32'))
-
         return data,sensors
+
+    def write_out(self,data):
+        os.chdir(self.path)
+        with pd.HDFStore(self.daq_outfile) as store:
+            self.panel_array = pd.DataFrame( data=data,
+                                             columns=self.sensors_xyz[:,0])
+
+            self.sensors_array = pd.DataFrame( data=self.sensors_xyz,
+                                                columns=['sensor','x','y','z'])
+            # complevel and complib are not compatible with MATLAB
+            store.put('MC',self.panel_array)
+            store.put('sensors',self.sensors_array)
+            store.close()
 
 
 class hdf_access(object):

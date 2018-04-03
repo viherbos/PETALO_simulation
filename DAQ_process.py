@@ -1,8 +1,9 @@
 import numpy as np
 import scipy as sp
-import HF_files as HF
-import config_sim as CFG
-import pet_graphics as PG
+from SimLib import HF_files as HF
+import HF_translator as HFT
+from SimLib import config_sim as CFG
+from SimLib import pet_graphics as PG
 import os
 import pandas as pd
 
@@ -14,7 +15,8 @@ if __name__ == '__main__':
 
     DAQ_data = HF.DAQ_IO("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
                             "daq_output.h5",
-                            "p_FRSET_0.h5")
+                            "p_FRSET_0.h5",
+                            "daq_output_processed.h5")
     data,sensors = DAQ_data.read()
 
     # DATA FRAME
@@ -31,7 +33,7 @@ if __name__ == '__main__':
     # Event Extraction only active sensors
     event_pointer = 0
     events = 5000
-    QDC_table = np.zeros((events,sensors.shape[0]))
+    QDC_table = np.zeros((events,sensors.shape[0]),dtype='int32')
 
 
     for j in range(events):
@@ -59,6 +61,8 @@ if __name__ == '__main__':
         event_data = event[:,0].reshape(1,len(event[:,0]))
 
         #SHOW(active_positions,event_data,0,False,True)
+
+    DAQ_data.write_out(QDC_table)
 
     for i in range(20):
         SHOW(sensors,QDC_table,i,False,True)

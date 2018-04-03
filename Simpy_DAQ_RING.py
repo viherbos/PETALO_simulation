@@ -91,7 +91,7 @@ if __name__ == '__main__':
     filename = "p_FRSET_0.h5"
     positions = np.array(pd.read_hdf(filename,key='sensors'))
     data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
-    SHOW(positions,data,0,True,False)
+    #SHOW(positions,data,0,True,False)
 
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -216,5 +216,6 @@ if __name__ == '__main__':
 
     DAQ_dump = HF.DAQ_IO("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
                             "daq_output.h5",
-                            "p_FRSET_0.h5")
+                            "p_FRSET_0.h5",
+                            "daq_out.h5")
     DAQ_dump.write(data)

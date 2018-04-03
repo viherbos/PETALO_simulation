@@ -33,9 +33,9 @@ class SIM_DATA(object):
                                         'IN_FIFO_depth':4,
                                         'OUT_FIFO_depth':64*4,
                                         'MAX_WILKINSON_LATENCY':5120,
-                                        'TE':6,
+                                        'TE':5,
                                         'TGAIN':1},
-                        'L1'          :{'L1_outrate'    :(1.0E9/40),
+                        'L1'          :{'L1_outrate'    :(2.0E9/40),
                                         'FIFO_L1_depth' :1024,
                                         'n_asics'       :8,
                                         'n_L1'          :3 }

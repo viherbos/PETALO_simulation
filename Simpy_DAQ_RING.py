@@ -27,12 +27,25 @@ def DAQ_gen(threads,sim_info):
 
     block_size = sim_info['Param'].FE_n_channels*sim_info['Param'].n_asics
 
+    DA = np.append(range(0,64),range(6*128+64,6*128+128))
+    DA = np.append(DA,[range(2*128,2*128+64),range(8*128+64,8*128+128)])
+    DA = np.append(DA,[range(4*128,4*128+64),range(10*128+64,10*128+128)])
+    DA = np.append(DA,[range(6*128,6*128+64),range(64,128)])
+    DA = np.append(DA,[range(8*128,8*128+64),range(2*128+64,2*128+128)])
+    DA = np.append(DA,[range(10*128,10*128+64),range(4*128+64,4*128+128)])
+    DA = np.append(DA,[range(1*128,1*128+64),range(7*128+64,7*128+128)])
+    DA = np.append(DA,[range(3*128,3*128+64),range(9*128+64,9*128+128)])
+    DA = np.append(DA,[range(5*128,5*128+64),range(11*128+64,11*128+128)])
+    DA = np.append(DA,[range(7*128,7*128+64),range(1*128+64,1*128+128)])
+    DA = np.append(DA,[range(9*128,9*128+64),range(3*128+64,3*128+128)])
+    DA = np.append(DA,[range(11*128,11*128+64),range(5*128+64,5*128+128)])
+
     L1h = [DAQ_RING.L1_hierarchy(
             env = env,
             param       = sim_info['Param'],
-            DATA        = sim_info['DATA'][:,i*block_size:(i+1)*block_size],
+            DATA        = sim_info['DATA'][:,DA[i*block_size:(i+1)*block_size]],
             timing      = sim_info['timing'],
-            sensors     = sim_info['Param'].sensors[i*block_size:(i+1)*block_size],
+            sensors     = sim_info['Param'].sensors[DA[i*block_size:(i+1)*block_size]],
             L1_id       = i)
                 for i in threads]
 

@@ -192,16 +192,31 @@ class DET_SHOW(object):
 
 if __name__ == '__main__':
 
-    SIM=conf.SIM_DATA(read=False)
-    print SIM.data
-    A = DET_SHOW(SIM.data)
+    # SIM=conf.SIM_DATA(read=False)
+    # print SIM.data
+    # A = DET_SHOW(SIM.data)
+    #
+    # os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")
+    # filename = "p_FRSET_0.h5"
+    #
+    # positions = np.array(pd.read_hdf(filename,key='sensors'))
+    # data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
+    #
+    # for i in range(0,100):
+    #     A(positions,data,i,True,False)
+    #A(positions,data,0,True,False)
 
-    os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")
-    filename = "p_FRSET_0.h5"
+
+
+    SIM_CONT=conf.SIM_DATA(filename="sim_config.json",read=True)
+    print SIM_CONT.data
+    B = DET_SHOW(SIM_CONT.data)
+
+    os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/Small_Animal/")
+    filename = "p_FR_infinity_0.h5"
 
     positions = np.array(pd.read_hdf(filename,key='sensors'))
     data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
-
     # for i in range(0,100):
-    #     A(positions,data,i,False,True)
-    A(positions,data,0,True,False)
+    #     B(positions,data,i)
+    B(positions,data,1,True,False)

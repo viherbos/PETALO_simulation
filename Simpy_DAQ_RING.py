@@ -96,8 +96,8 @@ if __name__ == '__main__':
                         range(n_files),n_sipms)
     DATA,sensors,n_events = A.compose()
 
-    n_events = 6000
-    DATA = DATA[0:6000,:]
+    n_events = 3000
+    DATA = DATA[0:3000,:]
 
     SHOW = PG.DET_SHOW(CG.data)
     os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")

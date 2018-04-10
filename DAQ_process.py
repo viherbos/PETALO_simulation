@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     # Event Extraction only active sensors
     event_pointer = 0
-    events = 5000
+    events = 2500
     QDC_table = np.zeros((events,sensors.shape[0]),dtype='int32')
 
 

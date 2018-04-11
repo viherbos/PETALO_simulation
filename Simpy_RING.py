@@ -5,7 +5,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 from simpy.events import AnyOf, AllOf, Event
 import sys
-sys.path.append("../PETALO_analysis/")
+sys.path.append("F:/Users/viherbos/Documents/GitHub/PETALO_analysis")
 import fit_library
 import HF_translator as HFT
 import os
@@ -54,7 +54,7 @@ def FE_sim(asics, sim_info):
 
     # Multiprocess Work
     pool_size = mp.cpu_count()
-    pool = mp.Pool(processes=pool_size)
+    pool = mp.Pool(processes=pool_size//2)
 
     pool_output = pool.map(FE_map, [[i] for i in asics])
 
@@ -78,7 +78,7 @@ if __name__ == '__main__':
 
     n_files = 1
     #Number of files to group for data input
-    A = HF.hdf_compose( "/home/viherbos/DAQ_DATA/NEUTRINOS/RING/","p_FRSET_",
+    A = HF.hdf_compose( "F:/DATOS_DAC/NEUTRINOS/RING/","p_FRSET_",
                         range(n_files),n_sipms)
     DATA,sensors,n_events = A.compose()
 

@@ -91,25 +91,11 @@ if __name__ == '__main__':
 
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
-    Param = DAQ_infinity.parameters(
-                    ch_rate    = CG.data['ENVIRONMENT']['ch_rate'],
-                    FE_outrate = CG.data['TOFPET']['outlink_rate'],
-                    FIFO_depth  = CG.data['TOFPET']['IN_FIFO_depth'],
-                    FIFO_out_depth = CG.data['TOFPET']['OUT_FIFO_depth'],
-                    FE_ch_latency = CG.data['TOFPET']['MAX_WILKINSON_LATENCY'],
-                    TE = CG.data['TOFPET']['TE'],
-                    TGAIN = CG.data['TOFPET']['TGAIN'],
-                    FE_n_channels = CG.data['TOFPET']['n_channels'],
-                    sensors = sensors,
-                    events = n_events,
-                    L1_outrate = CG.data['L1']['L1_outrate'],
-                    FIFO_L1a_depth = CG.data['L1']['FIFO_L1a_depth'],
-                    FIFO_L1b_depth = CG.data['L1']['FIFO_L1b_depth'],
-                    n_asics = CG.data['L1']['n_asics'],
-                    TEL1 = CG.data['L1']['TE']
-                    )
+    Param = DAQ_infinity.parameters(CG.data,sensors,n_events)
 
-    timing = np.random.randint(0,int(1E9/Param.ch_rate),size=n_events)
+
+    timing = np.random.randint(0,int(1E9/Param.P['ENVIRONMENT']['ch_rate']),
+                                size=n_events)
     # All sensors are given the same timestamp in an events
 
     sim_info = {'DATA' : DATA, 'timing':timing, 'Param' : Param }

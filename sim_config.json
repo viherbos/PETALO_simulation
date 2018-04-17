@@ -19,7 +19,7 @@
     }, 
     "TOFPET": {
         "TGAIN": 1, 
-        "TE": 5, 
+        "TE": 1, 
         "outlink_rate": 16250000.0, 
         "OUT_FIFO_depth": 256, 
         "n_channels": 64, 
@@ -27,9 +27,11 @@
         "MAX_WILKINSON_LATENCY": 5120
     }, 
     "L1": {
-        "L1_outrate": 50000000.0, 
-        "n_asics": 8, 
+        "L1_outrate": 1000000000.0, 
+        "n_asics": 1, 
         "n_L1": 3, 
-        "FIFO_L1_depth": 1024
+        "FIFO_L1b_depth": 10, 
+        "FIFO_L1a_depth": 10, 
+        "TE": 5
     }
 }

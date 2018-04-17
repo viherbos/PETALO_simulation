@@ -5,6 +5,7 @@ import numpy as np
 import multiprocessing as mp
 from functools import partial
 
+""" OBSOLETE """
 
 class HF(object):
     def __init__(self,path,in_file,out_file):
@@ -123,7 +124,7 @@ class HF_CONT(object):
 
     def read_table(self):
         os.chdir(self.path)
-        h5file = tb.open_file(self.in_file, mode="r)
+        h5file = tb.open_file(self.in_file, mode="r")
         self.table = h5file.root.MC.particles
         #particle_indx = [table['particle_indx'] for x in table.iterrows()]
 
@@ -245,7 +246,7 @@ if __name__ == "__main__":
     pool_size = mp.cpu_count()
     pool = mp.Pool(processes=pool_size)
 
-    pool.map(TRANS_map, [i for i in range(2)])
+    pool.map(TRANS_map, [i for i in range(10,41)])
 
     pool.close()
     pool.join()

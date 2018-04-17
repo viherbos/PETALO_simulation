@@ -122,7 +122,8 @@ if __name__ == '__main__':
                     L1_outrate = CG.data['L1']['L1_outrate'],
                     FIFO_L1a_depth = CG.data['L1']['FIFO_L1a_depth'],
                     FIFO_L1b_depth = CG.data['L1']['FIFO_L1b_depth'],
-                    n_asics = CG.data['L1']['n_asics']
+                    n_asics = CG.data['L1']['n_asics'],
+                    TEL1 = CG.data['L1']['TE']
                     )
 
     timing = np.random.randint(0,int(1E9/Param.ch_rate),size=n_events)

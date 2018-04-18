@@ -79,8 +79,8 @@ if __name__ == '__main__':
                         range(n_files),n_sipms)
     DATA,sensors,n_events = A.compose()
 
-    n_events = 100
-    DATA = DATA[0:100,:]
+    n_events = 30
+    DATA = DATA[0:n_events,:]
 
     # SHOW = PG.DET_SHOW(CG.data)
     os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/")
@@ -103,7 +103,19 @@ if __name__ == '__main__':
     L1s_n = 1
     L1s = range(L1s_n)
     pool_output = DAQ_sim(L1s,sim_info)
-    print pool_output['data_out']
+    print len(pool_output['data_out'])
+    print pool_output['lostC'].max()
+    print pool_output['lostL1b'].max()
+    print "//////////////////"
+
+    # add=0
+    # for i in pool_output['data_out']:
+    #     print i[0]['data'][0]
+    #     add = add + i[0]['data'][0]
+    #
+    # print add
+    for i in range(len(pool_output['data_out'])):
+        print pool_output['data_out'][i][0]['data']
 
     #outlink_ch = [ len(pool_output[j][0]['data_out'][:,0]) for j in L1s]
     ## Number of data frames (channels) recovered at the output of each L1

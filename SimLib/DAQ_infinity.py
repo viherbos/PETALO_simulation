@@ -271,7 +271,7 @@ class FE_asic(object):
         self.timing     = timing
         self.sensors    = sensors
         self.asic_id    = asic_id
-        self.n_ch       = param.P['TOFPET']['n_channels']
+        self.n_ch       = len(sensors) #param.P['TOFPET']['n_channels']
 
 
         # System Instanciation and Wiring
@@ -313,20 +313,20 @@ class L1(object):
                                     capacity=param.P['L1']['FIFO_L1a_depth'])
         self.fifoB      = simpy.Store(self.env,
                                     capacity=param.P['L1']['FIFO_L1b_depth'])
-        self.action1    = env.process(self.runA())
-        self.action2    = env.process(self.runB())
         self.buffer     = np.array([]).reshape(0,6)
         self.flag       = False
         self.frame_count = 0
         self.lostB      = 0
         self.lostA      = 0
+        self.action1    = env.process(self.runA())
+        self.action2    = env.process(self.runB())
 
 
     def process_frames(self):
         out=[]
         while (self.buffer.shape[0]>0):
-            time = self.buffer[0,5]
-            cond = np.array(self.buffer[:,5]==time)
+            time = self.buffer[0,4]
+            cond = np.array(self.buffer[:,4]==time)
             buffer_sel = self.buffer[cond,:]
             #Select those with same IN_TIME
 
@@ -340,13 +340,18 @@ class L1(object):
                     n_ch +=1
                 else:
                     sum_QDC += i[0]
+            if (n_ch == 0):
+                data_frame.append(1111)
+            # This is for any SiPM in the ASIC
             data_frame.append(sum_QDC)
+
             data_frame[0] = n_ch
+
             # Build Data frame
 
             out.append({'data'      :data_frame,
                         'event'     :self.buffer[0,1],
-                        'asic_id'   :self.buffer[0,2],
+                        'asic_id'   :self.buffer[0,3],
                         'in_time'   :time,
                         'out_time'  :0})
 
@@ -359,14 +364,14 @@ class L1(object):
 
     def put(self,data,lost):
         try:
-            if (len(self.fifoA.items)<(16)):
+            if (len(self.fifoA.items)<(self.param.P['L1']['FIFO_L1a_depth'])):
                 self.fifoA.put(data)
+                return lost
             else:
                 raise Full('L1 FIFO A is FULL')
         except Full as e:
             print ("TIME: %s // %s" % (self.env.now,e.value))
-            lost += 1
-            return lost
+            return (lost+1)
 
 
 
@@ -375,24 +380,26 @@ class L1(object):
             # if (len(self.fifoA.items) > 8):
             #     self.flag = True
             frame = yield self.fifoA.get()
-            yield self.env.timeout(1)
+            #print frame
 
-            if (self.frame_count < 9):
+
+            if (self.frame_count < self.param.P['L1']['buffer_size']):
                 self.buffer = np.pad(self.buffer,((1,0),(0,0)),mode='constant')
                 self.buffer[0,:] = frame
                 self.frame_count += 1
 
-            if (self.frame_count == 9):
+            if (self.frame_count == self.param.P['L1']['buffer_size']):
                 out = self.process_frames()
-
-                try:
-                    if (len(self.fifoB.items)<16):
-                        self.putB(out,self.lostB)
-                    else:
-                        raise Full('L1 FIFO B is FULL')
-                except Full as e:
-                    print ("TIME: %s // %s" % (self.env.now,e.value))
-                    self.lostB += 1
+                yield self.env.timeout(1.0E9/self.param.P['L1']['frame_process'])
+                # Internal RATE
+                # try:
+                #     if (len(self.fifoB.items)<self.param.P['L1']['buffer_size']):
+                self.lostB = self.putB(out,self.lostB)
+                #     else:
+                #         raise Full('L1 FIFO B is FULL')
+                # except Full as e:
+                #     print ("TIME: %s // %s" % (self.env.now,e.value))
+                #     self.lostB = self.lostB + 1
 
                 self.frame_count = 0
                 #self.flag = False
@@ -401,81 +408,113 @@ class L1(object):
 
     def putB(self,data,lost):
         try:
-            if (len(self.fifoB.items)<(16)):
+            if (len(self.fifoB.items)<(self.param.P['L1']['FIFO_L1b_depth'])):
                 self.fifoB.put(data)
+                return lost
             else:
                 raise Full('L1 FIFO B is FULL')
         except Full as e:
             print ("TIME: %s // %s" % (self.env.now,e.value))
-            lost += 1
-            return lost
+            return (lost+1)
 
 
     def runB(self):
         while True:
             msg = yield self.fifoB.get()
         # 8 bits n_CH | 10 bits TDC | n_CH * (16 bits + 10 bits) | 8 bits B_QDC
-            delay = (msg[0]['data'][0]*26 + 8 + 10 + 8)*(1.0/self.param.P['L1']['L1_outrate'])
-
+            # When no active channels -> send a sensor in the center of ASIC
+            delay = float((msg[0]['data'][0]*26 + 8 + 10 + 8))\
+                        *(1.0E9/self.param.P['L1']['L1_outrate'])
             yield self.env.timeout(int(delay))
             msg[0]['out_time'] = self.env.now
             self.out_stream.append(msg)
 
-
-class L1_hierarchy(object):
-
-    def __init__(self,env,param,DATA,timing,sensors,L1_id):
-        self.env        = env
-        self.param      = param
-        self.data_out   = [] #np.array([]).reshape(0,6)
-        self.block_size = param.P['TOFPET']['n_channels']
-
-        self.L1    = L1( env        = self.env,
-                         out_stream = self.data_out,
-                         param      = self.param,
-                         L1_id      = L1_id)
-
-        self.ASICS = [FE_asic( self.env,
-                               param = self.param,
-                               data  = DATA[:,i*self.block_size:(i+1)*self.block_size],
-                               timing = timing,
-                               sensors = sensors[i*self.block_size:(i+1)*self.block_size],
-                               asic_id = i)
-                               for i in range(self.param.P['L1']['n_asics'])]
-
-        for i in range(self.param.P['L1']['n_asics']):
-            self.ASICS[i].Link.out = self.L1
-
-
     def __call__(self):
-        lostP = np.array([]).reshape(0,1)
-        lostC = np.array([]).reshape(0,1)
-        lostL1a = np.array([]).reshape(0,1)
-        lostL1b = np.array([]).reshape(0,1)
+        # lostP = np.array([]).reshape(0,1)
+        # lostC = np.array([]).reshape(0,1)
+        # lostL1a = np.array([]).reshape(0,1)
+        # lostL1b = np.array([]).reshape(0,1)
+        #
+        # for j in range(self.param.P['L1']['n_asics']):
+        #     for i in range(self.param.P['TOFPET']['n_channels']):
+        #         lostP   = np.pad(lostP,((1,0),(0,0)),
+        #                             mode='constant', constant_values=0)
+        #         lostC   = np.pad(lostC,((1,0),(0,0)),
+        #                             mode='constant', constant_values=0)
+        # lostL1a = np.pad(lostL1a,((1,0),(0,0)),
+        #                     mode='constant', constant_values=0)
+        # lostL1b = np.pad(lostL1b,((1,0),(0,0)),
+        #                     mode='constant', constant_values=0)
+        #
+        #         lostP[0,:] = self.ASICS[j].Producer[i].lost
+        #         # Lost in CH input FIFO
+        #         lostC[0,:] = self.ASICS[j].Channels[i].lost
+        #         # Lost in ASIC OutLink FIFO
+        #         lostL1a[0,:] = self.L1.lostA
+        #         lostL1b[0,:] = self.L1.lostB
 
-        for j in range(self.param.P['L1']['n_asics']):
-            for i in range(self.param.P['TOFPET']['n_channels']):
-                lostP   = np.pad(lostP,((1,0),(0,0)),
-                                    mode='constant', constant_values=0)
-                lostC   = np.pad(lostC,((1,0),(0,0)),
-                                    mode='constant', constant_values=0)
-                lostL1a = np.pad(lostL1a,((1,0),(0,0)),
-                                    mode='constant', constant_values=0)
-                lostL1b = np.pad(lostL1b,((1,0),(0,0)),
-                                    mode='constant', constant_values=0)
-
-                lostP[0,:] = self.ASICS[j].Producer[i].lost
-                # Lost in CH input FIFO
-                lostC[0,:] = self.ASICS[j].Channels[i].lost
-                # Lost in ASIC OutLink FIFO
-                lostL1a[0,:] = self.L1.lostA
-                lostL1b[0,:] = self.L1.lostA
-
-        output = {  'lostP':lostP,
-                    'lostC':lostC,
-                    'lostL1a':lostL1a,
-                    'lostL1b':lostL1b,
-                    'data_out':self.L1.out_stream
+        output = {  'lostL1a':self.lostA,
+                    'lostL1b':self.lostB,
+                    'data_out':self.out_stream
                     }
 
         return output
+
+
+# class L1_hierarchy(object):
+#
+#     def __init__(self,env,param,DATA,timing,sensors,L1_id):
+#         self.env        = env
+#         self.param      = param
+#         self.data_out   = [] #np.array([]).reshape(0,6)
+#         self.block_size = param.P['TOFPET']['n_channels']
+#
+#         self.L1    = L1( env        = self.env,
+#                          out_stream = self.data_out,
+#                          param      = self.param,
+#                          L1_id      = L1_id)
+#
+#         self.ASICS = [FE_asic( self.env,
+#                                param = self.param,
+#                                data  = DATA[:,i*self.block_size:(i+1)*self.block_size],
+#                                timing = timing,
+#                                sensors = sensors[i*self.block_size:(i+1)*self.block_size],
+#                                asic_id = i)
+#                                for i in range(self.param.P['L1']['n_asics'])]
+#
+#         for i in range(self.param.P['L1']['n_asics']):
+#             self.ASICS[i].Link.out = self.L1
+#
+#
+#     def __call__(self):
+#         lostP = np.array([]).reshape(0,1)
+#         lostC = np.array([]).reshape(0,1)
+#         lostL1a = np.array([]).reshape(0,1)
+#         lostL1b = np.array([]).reshape(0,1)
+#
+#         for j in range(self.param.P['L1']['n_asics']):
+#             for i in range(self.param.P['TOFPET']['n_channels']):
+#                 lostP   = np.pad(lostP,((1,0),(0,0)),
+#                                     mode='constant', constant_values=0)
+#                 lostC   = np.pad(lostC,((1,0),(0,0)),
+#                                     mode='constant', constant_values=0)
+#                 lostL1a = np.pad(lostL1a,((1,0),(0,0)),
+#                                     mode='constant', constant_values=0)
+#                 lostL1b = np.pad(lostL1b,((1,0),(0,0)),
+#                                     mode='constant', constant_values=0)
+#
+#                 lostP[0,:] = self.ASICS[j].Producer[i].lost
+#                 # Lost in CH input FIFO
+#                 lostC[0,:] = self.ASICS[j].Channels[i].lost
+#                 # Lost in ASIC OutLink FIFO
+#                 lostL1a[0,:] = self.L1.lostA
+#                 lostL1b[0,:] = self.L1.lostB
+#
+#         output = {  'lostP':lostP,
+#                     'lostC':lostC,
+#                     'lostL1a':lostL1a,
+#                     'lostL1b':lostL1b,
+#                     'data_out':self.L1.out_stream
+#                     }
+#
+#         return output

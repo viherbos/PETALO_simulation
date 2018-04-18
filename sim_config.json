@@ -11,15 +11,15 @@
         ]
     }, 
     "TOPOLOGY": {
-        "radius_ext": 158, 
-        "n_rows": 8, 
-        "sipm_ext_row": 96, 
-        "radius_int": 108, 
-        "sipm_int_row": 96
+        "radius_ext": 1000, 
+        "n_rows": 16, 
+        "sipm_ext_row": 232, 
+        "radius_int": 1000, 
+        "sipm_int_row": 178
     }, 
     "TOFPET": {
         "TGAIN": 1, 
-        "TE": 1, 
+        "TE": 2, 
         "outlink_rate": 16250000.0, 
         "OUT_FIFO_depth": 256, 
         "n_channels": 64, 
@@ -27,11 +27,13 @@
         "MAX_WILKINSON_LATENCY": 5120
     }, 
     "L1": {
-        "L1_outrate": 1000000000.0, 
-        "n_asics": 1, 
-        "n_L1": 3, 
-        "FIFO_L1b_depth": 10, 
-        "FIFO_L1a_depth": 10, 
+        "frame_process": 2000000000.0, 
+        "L1_outrate": 500000000.0, 
+        "n_asics": 8, 
+        "n_L1": 100, 
+        "FIFO_L1b_depth": 256, 
+        "FIFO_L1a_depth": 256, 
+        "buffer_size": 128, 
         "TE": 5
     }
 }

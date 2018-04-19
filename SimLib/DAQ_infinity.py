@@ -349,11 +349,11 @@ class L1(object):
 
             # Build Data frame
 
-            out.append({'data'      :data_frame,
+            out =      {'data'      :data_frame,
                         'event'     :self.buffer[0,1],
                         'asic_id'   :self.buffer[0,3],
                         'in_time'   :time,
-                        'out_time'  :0})
+                        'out_time'  :0}
 
             #take all the used data out of the buffer
             cond_not = np.invert(cond)
@@ -423,10 +423,10 @@ class L1(object):
             msg = yield self.fifoB.get()
         # 8 bits n_CH | 10 bits TDC | n_CH * (16 bits + 10 bits) | 8 bits B_QDC
             # When no active channels -> send a sensor in the center of ASIC
-            delay = float((msg[0]['data'][0]*26 + 8 + 10 + 8))\
+            delay = float((msg['data'][0]*26 + 8 + 10 + 8))\
                         *(1.0E9/self.param.P['L1']['L1_outrate'])
             yield self.env.timeout(int(delay))
-            msg[0]['out_time'] = self.env.now
+            msg['out_time'] = self.env.now
             self.out_stream.append(msg)
 
     def __call__(self):

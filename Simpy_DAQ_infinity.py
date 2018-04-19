@@ -60,10 +60,6 @@ def DAQ_sch(sim_info):
                                 param.P['TOPOLOGY']['sipm_ext_row']))
     # SiPM matrixs Inner face and Outer face
 
-    # # L1 are required with max number of ASICs in param.P['L1']['n_asics']
-    # n_L1 = int(math.ceil(float(n_asics) / float(param.P['L1']['n_asics'])))
-    # n_L1_f = n_L1 // param.P['L1']['n_asics']
-    # n_L1_nf = n_L1 - n_L1_f
 
 
     #//////////////////////////////////////////////////////////////////////////
@@ -123,7 +119,7 @@ def DAQ_sch(sim_info):
 
     for i in range(len(ASICS)):
         ASICS[i].Link.out = L1[j]
-        if (count < param.P['L1']['n_asics']):
+        if (count < param.P['L1']['n_asics']-1):
             count += 1
         else:
             j += 1
@@ -176,7 +172,7 @@ if __name__ == '__main__':
     DATA,sensors,n_events = A.compose()
 
     # Number of events for simulation
-    n_events = 100
+    n_events = 50
     DATA = DATA[0:n_events,:]
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -197,9 +193,33 @@ if __name__ == '__main__':
     # L1s = range(CG.data['L1']['n_L1'])
     # pool_output = DAQ_sim(L1s,sim_info)
 
-    SIM_OUT = DAQ_sch(sim_info)
+    SIM_OUT = np.array(DAQ_sch(sim_info))
 
-    print SIM_OUT
+    data = []
+    for j in range(13):
+        for i in range(len(SIM_OUT[j]['data_out'])):
+            if SIM_OUT[j]['data_out'][i]['data'][0] > 0:
+                data.append(SIM_OUT[j]['data_out'][i]['data'])
+
+    A = np.array(data)
+    sort = np.array([i[1] for i in A])
+    A = A[np.argsort(sort)]
+
+    last = 0
+    event = 0
+    data   = np.zeros((n_events,6560))
+
+    for i in A:
+        if i[1] == last:
+            for x in range(i[0]):
+                data[event,int(i[2+x*2])-1000]=i[3+x*2]
+        else:
+            for x in range(i[0]):
+                print int(i[2+x*2])-1000
+                data[event,int(i[2+x*2])-1000]=i[3+x*2]
+            event += 1
+            last = i[1]
+
 
     #print ("A total of %d events processed" % np.array(outlink_ch).sum())
 
@@ -292,8 +312,8 @@ if __name__ == '__main__':
     # plt.show()
     #
     #
-    # DAQ_dump = HF.DAQ_IO("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/",
-    #                         "daq_output.h5",
-    #                         "p_FRSET_0.h5",
-    #                         "daq_out.h5")
-    # DAQ_dump.write(data)
+    DAQ_dump = HF.DAQ_IO("/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
+                            "daq_output.h5",
+                            "p_FR_infinity_0.h5",
+                            "daq_out.h5")
+    DAQ_dump.write_out(data)

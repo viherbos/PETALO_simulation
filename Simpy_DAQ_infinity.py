@@ -272,7 +272,7 @@ if __name__ == '__main__':
     DATA,sensors,n_events = A.compose()
 
     # Number of events for simulation
-    n_events = 1000
+    n_events = 5000
     DATA = DATA[0:n_events,:]
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -305,11 +305,11 @@ if __name__ == '__main__':
     # DATA ANALYSIS AND GRAPHS
     latency = np.array(out['L1']['out_time'])-np.array(out['L1']['in_time'])
 
-    print ("LOST DATA L1A -> L1B          = %d" % (np.array(out['L1']['lostL1a']).sum()))
-    print ("LOST DATA L1B -> OUTPUT       = %d" % (np.array(out['L1']['lostL1b']).sum()))
     print ("LOST DATA PRODUCER -> CH      = %d" % (out['ASICS']['lost_producers'].sum()))
     print ("LOST DATA CHANNELS -> OUTLINK = %d" % (out['ASICS']['lost_channels'].sum()))
     print ("LOST DATA OUTLINK -> L1       = %d" % (out['ASICS']['lost_outlink'].sum()))
+    print ("LOST DATA L1A -> L1B          = %d" % (np.array(out['L1']['lostL1a']).sum()))
+    print ("LOST DATA L1B -> OUTPUT       = %d" % (np.array(out['L1']['lostL1b']).sum()))
 
 
     fit = fit_library.gauss_fit()

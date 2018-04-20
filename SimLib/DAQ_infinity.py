@@ -246,7 +246,7 @@ class FE_outlink(object):
         while True:
             yield self.env.timeout(self.latency)
             packet = yield self.res.get()
-            self.out.put(packet,self.lost)
+            self.lost = self.out.put(packet,self.lost)
 
     def __call__(self):
         output = {  'lost'   : self.lost,

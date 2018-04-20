@@ -19,7 +19,7 @@ class SIM_DATA(object):
         else:
             # These are default values.
             # L1 output data frame = QDC[10] + TDC[10] + SiPM[20] = 40 bits
-            self.data= {'ENVIRONMENT'  :{'ch_rate'     :1000E3,
+            self.data= {'ENVIRONMENT'  :{'ch_rate'     :1500E3,
                                         'temperature' :300},
                         'SIPM'        :{'size'        :[1,3,3]},
                         'TOPOLOGY'    :{'radius_int'   :1000,
@@ -35,14 +35,14 @@ class SIM_DATA(object):
                                         'MAX_WILKINSON_LATENCY':5120,
                                         'TE':1,
                                         'TGAIN':1},
-                        'L1'          :{'L1_outrate'    :8E8,
+                        'L1'          :{'L1_outrate'    :5E8,
                                         'frame_process' :1E7,
-                                        'FIFO_L1a_depth':160,
+                                        'FIFO_L1a_depth':200,
                                         'FIFO_L1b_depth':100,
                                         'buffer_size'   :128,
                                         'n_asics'       :8,
                                         'n_L1'          :100,
-                                        'TE'            :3 }
+                                        'TE'            :5 }
                        }
         self.config_write()
 

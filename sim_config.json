@@ -1,6 +1,6 @@
 {
     "ENVIRONMENT": {
-        "ch_rate": 1000000.0, 
+        "ch_rate": 1500000.0, 
         "temperature": 300
     }, 
     "SIPM": {
@@ -28,12 +28,12 @@
     }, 
     "L1": {
         "frame_process": 10000000.0, 
-        "L1_outrate": 800000000.0, 
+        "L1_outrate": 500000000.0, 
         "n_asics": 8, 
         "n_L1": 100, 
         "FIFO_L1b_depth": 100, 
-        "FIFO_L1a_depth": 160, 
+        "FIFO_L1a_depth": 200, 
         "buffer_size": 128, 
-        "TE": 3
+        "TE": 5
     }
 }

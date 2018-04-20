@@ -26,21 +26,6 @@ class parameters(object):
         self.P          = data
         self.sensors    = sensors
         self.events     = n_events
-        # ch_rate    = CG.data['ENVIRONMENT']['ch_rate'],
-        # FE_outrate = CG.data['TOFPET']['outlink_rate'],
-        # FIFO_depth  = CG.data['TOFPET']['IN_FIFO_depth'],
-        # FIFO_out_depth = CG.data['TOFPET']['OUT_FIFO_depth'],
-        # FE_ch_latency = CG.data['TOFPET']['MAX_WILKINSON_LATENCY'],
-        # TE = CG.data['TOFPET']['TE'],
-        # TGAIN = CG.data['TOFPET']['TGAIN'],
-        # FE_n_channels = CG.data['TOFPET']['n_channels'],
-        # sensors = sensors,
-        # events = n_events,
-        # L1_outrate = CG.data['L1']['L1_outrate'],
-        # FIFO_L1a_depth = CG.data['L1']['FIFO_L1a_depth'],
-        # FIFO_L1b_depth = CG.data['L1']['FIFO_L1b_depth'],
-        # n_asics = CG.data['L1']['n_asics'],
-        # TEL1 = CG.data['L1']['TE']
 
 
 class ch_frame(object):
@@ -151,6 +136,11 @@ class producer(object):
             except IndexError:
                 print "List Empty"
 
+    def __call__(self):
+        output = {  'lost'   : self.lost
+                    }
+        return output
+
 
 class FE_channel(object):
     """ ASIC channel model.
@@ -176,12 +166,12 @@ class FE_channel(object):
         self.index = 0
         self.lost = 0
         self.gain = param.P['TOFPET']['TGAIN']
-        self.log = []
+        self.log = np.array([]).reshape(0,2)
         self.sensor_id = sensor_id
 
     def print_stats(self):
-        #print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
-        self.log.append((len(self.res.items),self.env.now))
+        self.log=np.vstack([self.log,[len(self.res.items),self.env.now]])
+        # FIFO Statistics
 
     def put(self,data,lost):
         try:
@@ -207,6 +197,11 @@ class FE_channel(object):
             # Analize dynamic range
             self.lost = self.out.put(self.packet,self.lost)
 
+    def __call__(self):
+        output = {  'lost'   : self.lost,
+                    'log'    : self.log
+                    }
+        return output
 
 class FE_outlink(object):
     """ ASIC Outlink model.
@@ -232,7 +227,6 @@ class FE_outlink(object):
         self.lost = 0
 
     def print_stats(self):
-        #print ('TIME: %d // ITEMS: %s ' % (self.env.now,self.res.items))
         self.log=np.vstack([self.log,[len(self.res.items),self.env.now]])
         # FIFO Statistics
 
@@ -240,7 +234,7 @@ class FE_outlink(object):
         try:
             if (len(self.res.items)<self.FIFO_out_size):
                 self.res.put(data)
-                #self.print_stats()
+                self.print_stats()
                 return lost
             else:
                 raise Full('OUT LINK FIFO is FULL')
@@ -254,7 +248,11 @@ class FE_outlink(object):
             packet = yield self.res.get()
             self.out.put(packet,self.lost)
 
-
+    def __call__(self):
+        output = {  'lost'   : self.lost,
+                    'log'    : self.log
+                    }
+        return output
 
 
 class FE_asic(object):
@@ -271,7 +269,7 @@ class FE_asic(object):
         self.timing     = timing
         self.sensors    = sensors
         self.asic_id    = asic_id
-        self.n_ch       = len(sensors) #param.P['TOFPET']['n_channels']
+        self.n_ch       = len(sensors)
 
 
         # System Instanciation and Wiring
@@ -293,6 +291,28 @@ class FE_asic(object):
         for i in range(self.n_ch):
             self.Producer[i].out = self.Channels[i]
             self.Channels[i].out = self.Link
+
+
+    def __call__(self):
+        lost_producers = np.array([]).reshape(0,1)
+        lost_channels  = np.array([]).reshape(0,1)
+        log_channels   = np.array([]).reshape(0,2)
+
+        for i in self.Producer:
+            lost_producers = np.vstack([lost_producers, i()['lost']])
+
+        for i in self.Channels:
+            lost_channels = np.vstack([lost_channels, i()['lost']])
+            log_channels  = np.vstack([log_channels, i()['log']])
+
+
+        output = {  'lost_producers' : lost_producers,
+                    'lost_channels'  : lost_channels,
+                    'lost_outlink'   : self.Link()['lost'],
+                    'log_channels'   : log_channels,
+                    'log_outlink'    : self.Link()['log']
+                    }
+        return output
 
 
 
@@ -320,7 +340,15 @@ class L1(object):
         self.lostA      = 0
         self.action1    = env.process(self.runA())
         self.action2    = env.process(self.runB())
+        self.logA = np.array([]).reshape(0,2)
+        self.logB = np.array([]).reshape(0,2)
 
+    def print_statsA(self):
+        self.logA=np.vstack([self.logA,[len(self.fifoA.items),self.env.now]])
+        # FIFO Statistics
+    def print_statsB(self):
+        self.logB=np.vstack([self.logB,[len(self.fifoB.items),self.env.now]])
+        # FIFO Statistics
 
     def process_frames(self):
         out=[]
@@ -366,6 +394,7 @@ class L1(object):
         try:
             if (len(self.fifoA.items)<(self.param.P['L1']['FIFO_L1a_depth'])):
                 self.fifoA.put(data)
+                self.print_statsA()
                 return lost
             else:
                 raise Full('L1 FIFO A is FULL')
@@ -377,11 +406,7 @@ class L1(object):
 
     def runA(self):
         while True:
-            # if (len(self.fifoA.items) > 8):
-            #     self.flag = True
             frame = yield self.fifoA.get()
-            #print frame
-
 
             if (self.frame_count < self.param.P['L1']['buffer_size']):
                 self.buffer = np.pad(self.buffer,((1,0),(0,0)),mode='constant')
@@ -403,6 +428,7 @@ class L1(object):
         try:
             if (len(self.fifoB.items)<(self.param.P['L1']['FIFO_L1b_depth'])):
                 self.fifoB.put(data)
+                self.print_statsB()
                 return lost
             else:
                 raise Full('L1 FIFO B is FULL')
@@ -422,34 +448,20 @@ class L1(object):
             msg['out_time'] = self.env.now
             self.out_stream.append(msg)
 
-    def __call__(self):
-        # lostP = np.array([]).reshape(0,1)
-        # lostC = np.array([]).reshape(0,1)
-        # lostL1a = np.array([]).reshape(0,1)
-        # lostL1b = np.array([]).reshape(0,1)
-        #
-        # for j in range(self.param.P['L1']['n_asics']):
-        #     for i in range(self.param.P['TOFPET']['n_channels']):
-        #         lostP   = np.pad(lostP,((1,0),(0,0)),
-        #                             mode='constant', constant_values=0)
-        #         lostC   = np.pad(lostC,((1,0),(0,0)),
-        #                             mode='constant', constant_values=0)
-        # lostL1a = np.pad(lostL1a,((1,0),(0,0)),
-        #                     mode='constant', constant_values=0)
-        # lostL1b = np.pad(lostL1b,((1,0),(0,0)),
-        #                     mode='constant', constant_values=0)
-        #
-        #         lostP[0,:] = self.ASICS[j].Producer[i].lost
-        #         # Lost in CH input FIFO
-        #         lostC[0,:] = self.ASICS[j].Channels[i].lost
-        #         # Lost in ASIC OutLink FIFO
-        #         lostL1a[0,:] = self.L1.lostA
-        #         lostL1b[0,:] = self.L1.lostB
 
+    def __call__(self):
         output = {  'lostL1a':self.lostA,
                     'lostL1b':self.lostB,
-                    'data_out':self.out_stream
-                    }
+                    'logA'   :self.logA,
+                    'logB'   :self.logB,
+                    'data_out':self.out_stream}
+        # data_out CONTENTS
+        # {'data'      :self.data,
+        # DATA fiels: n_CH | TDC | SENSOR1 | QDC1 | SENSOR2 | QDC2 | ... | B_QDC
+        #'event'     :self.event,
+        #'asic_id'   :self.asic_id,
+        #'in_time'   :self.in_time,
+        #'out_time'  :self.out_time}
 
         return output
 

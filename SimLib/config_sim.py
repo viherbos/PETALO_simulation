@@ -64,5 +64,8 @@ class SIM_DATA(object):
 
 
 if __name__ == '__main__':
-    SIM=SIM_DATA(read=False)
+
+    SIM=SIM_DATA(   filename = "sim_config.json",
+                        read = False
+                )
     print SIM.data

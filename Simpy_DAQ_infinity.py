@@ -128,86 +128,43 @@ def DAQ_sch(sim_info):
             j += 1
             count = 0
 
+    # Run Simulation for a very long time to force flush of FIFOs
     env.run(until = 100E9)
 
-    gen_output = [L1[i]() for i in range(n_L1)]
+    # Gather output information and statistics
+    OUTPUT_L1     = [L1[i]() for i in range(n_L1)]
+    OUTPUT_ASICS  = [ASICS[i]() for i in range(n_asics)]
 
     elapsed_time = time.time()-start_time
-    print ("IT TOOK %d SECONDS TO DO THIS" % elapsed_time)
 
+
+    topology = {'n_sipms_I':n_sipms_I, 'n_sipms_O':n_sipms_O, 'n_sipms': n_sipms,
+                'n_asics_I':n_asics_I, 'n_asics_f_I':n_asics_f_I,'n_asics_p_I':n_asics_p_I,
+                'n_asics_O':n_asics_O, 'n_asics_f_O':n_asics_f_O,'n_asics_p_O':n_asics_p_O,
+                'n_asics':n_asics, 'n_L1':n_L1, 'n_L1_f':n_L1_f, 'n_L1_p':n_L1_p}
+    print ("IT TOOK %d SECONDS TO DO THIS" % elapsed_time)
     print ("Number of L1 Inst : %d \nNumber of ASICS Inst : %d " % (len(L1),len(ASICS)))
 
 
-
-    return gen_output
-
-
-
-# def DAQ_sim(L1h_array, sim_info):
-#
-#     kargs = {'sim_info':sim_info}
-#     DAQ_map = partial(DAQ_gen, **kargs)
-#
-#     # Multiprocess Work
-#     # pool_size = mp.cpu_count()
-#     # pool = mp.Pool(processes=pool_size)
-#     #
-#     # pool_output = pool.map(DAQ_map, [[i] for i in L1h_array])
-#     #
-#     # pool.close()
-#     # pool.join()
-#     pool_output = DAQ_map([1])
-#
-#     return pool_output
+    return {'L1_out':OUTPUT_L1, 'ASICS_out':OUTPUT_ASICS}, topology
 
 
 
-if __name__ == '__main__':
+def DAQ_OUTPUT_processing(SIM_OUT,n_L1):
+    data, in_time, out_time, lostL1a, lostL1b = [],[],[],[],[]
+    SIM_OUT_L1      = np.array(SIM_OUT['L1_out'])
+    SIM_OUT_ASICs   = np.array(SIM_OUT['ASICS_out'])
 
-    CG = CFG.SIM_DATA()
-    CG = CG.data
-    # Read data from json file
-    n_sipms_int = CG['TOPOLOGY']['sipm_int_row']*CG['TOPOLOGY']['n_rows']
-    n_sipms_ext = CG['TOPOLOGY']['sipm_ext_row']*CG['TOPOLOGY']['n_rows']
-    n_sipms     = n_sipms_int + n_sipms_ext
-
-    n_files = 1
-    #Number of files to group for data input
-    A = HF.hdf_compose( "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
-                        "p_FR_infinity_",
-                        range(n_files),n_sipms)
-    DATA,sensors,n_events = A.compose()
-
-    # Number of events for simulation
-    n_events = 2000
-    DATA = DATA[0:n_events,:]
-    print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
-
-    # SHOW = PG.DET_SHOW(CG.data)
-    # os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")
-    # filename = "p_FRSET_0.h5"
-    # positions = np.array(pd.read_hdf(filename,key='sensors'))
-    # data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
-    # SHOW(positions,data,0,True,False)
-
-
-    Param = DAQ.parameters(CG,sensors,n_events)
-
-    timing = np.random.randint(0,int(1E9/Param.P['ENVIRONMENT']['ch_rate']),size=n_events)
-
-    # All sensors are given the same timestamp in an events
-    sim_info = {'DATA': DATA, 'timing': timing, 'Param': Param }
-
-    # L1s = range(CG.data['L1']['n_L1'])
-    # pool_output = DAQ_sim(L1s,sim_info)
-
-    SIM_OUT = np.array(DAQ_sch(sim_info))
-
-    data = []
-    for j in range(13):
-        for i in range(len(SIM_OUT[j]['data_out'])):
+    # Gather information from L1
+    for j in range(n_L1):
+        lostL1a.append(SIM_OUT_L1[j]['lostL1a'])
+        lostL1b.append(SIM_OUT_L1[j]['lostL1b'])
+        for i in range(len(SIM_OUT_L1[j]['data_out'])):
             #if SIM_OUT[j]['data_out'][i]['data'][0] > 0:
-            data.append(SIM_OUT[j]['data_out'][i]['data'])
+            data.append(SIM_OUT_L1[j]['data_out'][i]['data'])
+            in_time.append(SIM_OUT_L1[j]['data_out'][i]['in_time'])
+            out_time.append(SIM_OUT_L1[j]['data_out'][i]['out_time'])
+
 
     A = np.array(data)
     sort = np.array([i[1] for i in A])
@@ -241,6 +198,86 @@ if __name__ == '__main__':
 
         event += 1
 
+    output = {'data': data,
+              'L1': {'in_time': in_time, 'out_time': out_time,
+                           'lostL1a': lostL1a, 'lostL1b': lostL1b}
+            }
+
+
+    return output
+
+# def DAQ_sim(L1h_array, sim_info):
+#
+#     kargs = {'sim_info':sim_info}
+#     DAQ_map = partial(DAQ_gen, **kargs)
+#
+#     # Multiprocess Work
+#     # pool_size = mp.cpu_count()
+#     # pool = mp.Pool(processes=pool_size)
+#     #
+#     # pool_output = pool.map(DAQ_map, [[i] for i in L1h_array])
+#     #
+#     # pool.close()
+#     # pool.join()
+#     pool_output = DAQ_map([1])
+#
+#     return pool_output
+
+
+
+if __name__ == '__main__':
+
+    CG = CFG.SIM_DATA(filename = "sim_config.json",
+                          read = True)
+    CG = CG.data
+    # Read data from json file
+    n_sipms_int = CG['TOPOLOGY']['sipm_int_row']*CG['TOPOLOGY']['n_rows']
+    n_sipms_ext = CG['TOPOLOGY']['sipm_ext_row']*CG['TOPOLOGY']['n_rows']
+    n_sipms     = n_sipms_int + n_sipms_ext
+
+    n_files = 1
+    #Number of files to group for data input
+    A = HF.hdf_compose( "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
+                        "p_FR_infinity_",
+                        range(n_files),n_sipms)
+    DATA,sensors,n_events = A.compose()
+
+    # Number of events for simulation
+    n_events = 200
+    DATA = DATA[0:n_events,:]
+    print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
+
+    # SHOW = PG.DET_SHOW(CG.data)
+    # os.chdir("/home/viherbos/DAQ_DATA/NEUTRINOS/RING/")
+    # filename = "p_FRSET_0.h5"
+    # positions = np.array(pd.read_hdf(filename,key='sensors'))
+    # data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
+    # SHOW(positions,data,0,True,False)
+
+
+    Param = DAQ.parameters(CG,sensors,n_events)
+
+    timing = np.random.randint(0,int(1E9/Param.P['ENVIRONMENT']['ch_rate']),size=n_events)
+
+    # All sensors are given the same timestamp in an events
+    sim_info = {'DATA': DATA, 'timing': timing, 'Param': Param }
+
+    # L1s = range(CG.data['L1']['n_L1'])
+    # pool_output = DAQ_sim(L1s,sim_info)
+
+    SIM_OUT,topology = DAQ_sch(sim_info)
+    print topology
+
+    # Data Output recovery
+    out = DAQ_OUTPUT_processing(SIM_OUT,topology['n_L1'])
+
+
+
+    # DATA ANALYSIS AND GRAPHS
+    latency = np.array(out['L1']['out_time'])-np.array(out['L1']['in_time'])
+
+    print ("LOST DATA L1A -> L1B = %d" % (np.array(out['L1']['lostL1a']).sum()))
+    print ("LOST DATA L1B -> OUTPUT = %d" % (np.array(out['L1']['lostL1b']).sum()))
 
     #print ("A total of %d events processed" % np.array(outlink_ch).sum())
 
@@ -288,8 +325,8 @@ if __name__ == '__main__':
     #     data[0:data_frame_array.shape[0],:] = data_frame_array
     #
     #
-    # fit = fit_library.gauss_fit()
-    # fig = plt.figure(figsize=(16,8))
+    fit = fit_library.gauss_fit()
+    fig = plt.figure(figsize=(16,8))
     # fit(lostP,'sqrt')
     # fit.plot(axis = fig.add_subplot(231),
     #         title = "FE FIFO drops",
@@ -314,12 +351,12 @@ if __name__ == '__main__':
     #         xlabel = "Ch_Events",
     #         ylabel = "Hits",
     #         res = False)
-    # fit(latency,50)
-    # fit.plot(axis = fig.add_subplot(233),
-    #         title = "Data Latency",
-    #         xlabel = "Latency in nanoseconds",
-    #         ylabel = "Hits",
-    #         res = False)
+    fit(latency,50)
+    fit.plot(axis = fig.add_subplot(233),
+            title = "Data Latency",
+            xlabel = "Latency in nanoseconds",
+            ylabel = "Hits",
+            res = False)
     #
     #
     # fig.add_subplot(236)
@@ -328,13 +365,15 @@ if __name__ == '__main__':
     # plt.plot(x_data,y_data)
     # plt.ylim((0.9,1.0))
     #
-    # fig.tight_layout()
-    #
-    # plt.show()
-    #
-    #
+    fig.tight_layout()
+
+    # Write output to file
     DAQ_dump = HF.DAQ_IO("/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
                             "daq_output.h5",
                             "p_FR_infinity_0.h5",
                             "daq_out.h5")
-    DAQ_dump.write_out(data)
+    DAQ_dump.write_out(out['data'],topology)
+
+    plt.show()
+    #
+    #

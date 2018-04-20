@@ -150,15 +150,38 @@ def DAQ_sch(sim_info):
 
 
 
-def DAQ_OUTPUT_processing(SIM_OUT,n_L1):
+def DAQ_OUTPUT_processing(SIM_OUT,n_L1,n_asics):
     data, in_time, out_time, lostL1a, lostL1b = [],[],[],[],[]
+    lost_producers= np.array([]).reshape(0,1)
+    lost_channels = np.array([]).reshape(0,1)
+    lost_outlink = np.array([]).reshape(0,1)
     SIM_OUT_L1      = np.array(SIM_OUT['L1_out'])
     SIM_OUT_ASICs   = np.array(SIM_OUT['ASICS_out'])
+    logA = np.array([]).reshape(0,2)
+    logB = np.array([]).reshape(0,2)
+    log_channels = np.array([]).reshape(0,2)
+    log_outlink = np.array([]).reshape(0,2)
 
-    # Gather information from L1
+    # Gather information from ASICS layer
+    for j in range(n_asics):
+        lost_producers = np.vstack([lost_producers,
+                                    SIM_OUT_ASICs[j]['lost_producers']])
+        lost_channels = np.vstack([lost_channels,
+                                    SIM_OUT_ASICs[j]['lost_channels']])
+        lost_outlink  = np.vstack([lost_outlink,
+                                    SIM_OUT_ASICs[j]['lost_outlink']])
+        log_channels  = np.vstack([log_channels,
+                                    SIM_OUT_ASICs[j]['log_channels']])
+        log_outlink   = np.vstack([log_outlink,
+                                    SIM_OUT_ASICs[j]['log_outlink']])
+
+    # Gather information from L1 layer
     for j in range(n_L1):
         lostL1a.append(SIM_OUT_L1[j]['lostL1a'])
         lostL1b.append(SIM_OUT_L1[j]['lostL1b'])
+        logA=np.vstack([logA,SIM_OUT_L1[j]['logA']])
+        logB=np.vstack([logB,SIM_OUT_L1[j]['logB']])
+
         for i in range(len(SIM_OUT_L1[j]['data_out'])):
             #if SIM_OUT[j]['data_out'][i]['data'][0] > 0:
             data.append(SIM_OUT_L1[j]['data_out'][i]['data'])
@@ -200,7 +223,13 @@ def DAQ_OUTPUT_processing(SIM_OUT,n_L1):
 
     output = {'data': data,
               'L1': {'in_time': in_time, 'out_time': out_time,
-                           'lostL1a': lostL1a, 'lostL1b': lostL1b}
+                     'lostL1a': lostL1a, 'lostL1b': lostL1b,
+                     'logA': logA, 'logB': logB},
+              'ASICS':{ 'lost_producers':lost_producers,
+                        'lost_channels':lost_channels,
+                        'lost_outlink':lost_outlink,
+                        'log_channels':log_channels,
+                        'log_outlink':log_outlink}
             }
 
 
@@ -243,7 +272,7 @@ if __name__ == '__main__':
     DATA,sensors,n_events = A.compose()
 
     # Number of events for simulation
-    n_events = 200
+    n_events = 1000
     DATA = DATA[0:n_events,:]
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -269,88 +298,46 @@ if __name__ == '__main__':
     print topology
 
     # Data Output recovery
-    out = DAQ_OUTPUT_processing(SIM_OUT,topology['n_L1'])
+    out = DAQ_OUTPUT_processing(SIM_OUT,topology['n_L1'],topology['n_asics'])
 
 
 
     # DATA ANALYSIS AND GRAPHS
     latency = np.array(out['L1']['out_time'])-np.array(out['L1']['in_time'])
 
-    print ("LOST DATA L1A -> L1B = %d" % (np.array(out['L1']['lostL1a']).sum()))
-    print ("LOST DATA L1B -> OUTPUT = %d" % (np.array(out['L1']['lostL1b']).sum()))
+    print ("LOST DATA L1A -> L1B          = %d" % (np.array(out['L1']['lostL1a']).sum()))
+    print ("LOST DATA L1B -> OUTPUT       = %d" % (np.array(out['L1']['lostL1b']).sum()))
+    print ("LOST DATA PRODUCER -> CH      = %d" % (out['ASICS']['lost_producers'].sum()))
+    print ("LOST DATA CHANNELS -> OUTLINK = %d" % (out['ASICS']['lost_channels'].sum()))
+    print ("LOST DATA OUTLINK -> L1       = %d" % (out['ASICS']['lost_outlink'].sum()))
 
-    #print ("A total of %d events processed" % np.array(outlink_ch).sum())
 
-    # latency = np.array([]).reshape(0,1)
-    # lostP = np.array([]).reshape(0,1)
-    # lostC = np.array([]).reshape(0,1)
-    # lostL1 = np.array([]).reshape(0,1)
-    # data   = np.array([]).reshape(0,6)
-    #
-    #
-    # for i in L1s:
-    #     data_frame_array = pool_output[i][0]['data_out'][:,:]
-    #     lostP_aux  = pool_output[i][0]['lostP']
-    #     lostC_aux  = pool_output[i][0]['lostC']
-    #     lostL1_aux = pool_output[i][0]['lostL1']
-    #
-    #
-    #     in_time_array  = data_frame_array[:,4]
-    #     out_time_array = data_frame_array[:,5]
-    #     latency_aux  = out_time_array - in_time_array
-    #     #latency = np.vstack([latency,latency_aux.reshape(-1,1)])
-    #     latency = np.pad(latency,((len(latency_aux),0),(0,0)),
-    #                              mode='constant',
-    #                              constant_values=0)
-    #     latency[0:len(latency_aux),0] = latency_aux
-    #
-    #     lostP = np.pad(lostP,((len(lostP_aux),0),(0,0)),
-    #                              mode='constant',
-    #                              constant_values=0)
-    #     lostP[0:len(lostP_aux),0] = lostP_aux[:,0]
-    #
-    #     lostC = np.pad(lostC,((len(lostC_aux),0),(0,0)),
-    #                              mode='constant',
-    #                              constant_values=0)
-    #     lostC[0:len(lostC_aux),0] = lostC_aux[:,0]
-    #
-    #     lostL1 = np.pad(lostL1,((len(lostL1_aux),0),(0,0)),
-    #                              mode='constant',
-    #                              constant_values=0)
-    #     lostL1[0:len(lostL1_aux),0] = lostL1_aux[:,0]
-    #
-    #     data = np.pad(data,((data_frame_array.shape[0],0),(0,0)),
-    #                              mode='constant',
-    #                              constant_values=0)
-    #     data[0:data_frame_array.shape[0],:] = data_frame_array
-    #
-    #
     fit = fit_library.gauss_fit()
     fig = plt.figure(figsize=(16,8))
-    # fit(lostP,'sqrt')
-    # fit.plot(axis = fig.add_subplot(231),
-    #         title = "FE FIFO drops",
-    #         xlabel = "Lost Events",
-    #         ylabel = "Hits",
-    #         res = False)
-    # fit(lostC,'sqrt')
-    # fit.plot(axis = fig.add_subplot(234),
-    #         title = "Data Link FIFO drops",
-    #         xlabel = "Lost Events",
-    #         ylabel = "Hits",
-    #         res = False)
-    # fit(lostL1,'sqrt')
-    # fit.plot(axis = fig.add_subplot(235),
-    #         title = "L1 FIFO drops",
-    #         xlabel = "Lost Events",
-    #         ylabel = "Hits",
-    #         res = False)
-    # fit(outlink_ch,'sqrt')
-    # fit.plot(axis = fig.add_subplot(232),
-    #         title = "Recovered Channel Data",
-    #         xlabel = "Ch_Events",
-    #         ylabel = "Hits",
-    #         res = False)
+    fit(out['ASICS']['log_channels'][:,0],'sqrt')
+    fit.plot(axis = fig.add_subplot(231),
+            title = "ASICS Channel Input analog FIFO (4)",
+            xlabel = "FIFO Occupancy",
+            ylabel = "Hits",
+            res = False, fit = False)
+    fit(out['ASICS']['log_outlink'][:,0],'sqrt')
+    fit.plot(axis = fig.add_subplot(234),
+            title = "ASICS Channels -> Outlink",
+            xlabel = "FIFO Occupancy",
+            ylabel = "Hits",
+            res = False, fit = False)
+    fit(out['L1']['logA'][:,0],'sqrt')
+    fit.plot(axis = fig.add_subplot(235),
+            title = "ASICS -> L1A (FIFOA)",
+            xlabel = "FIFO Occupancy",
+            ylabel = "Hits",
+            res = False, fit = False)
+    fit(out['L1']['logB'][:,0],'sqrt')
+    fit.plot(axis = fig.add_subplot(236),
+            title = "L1 OUTPUT (FIFOB)",
+            xlabel = "FIFO Occupancy",
+            ylabel = "Hits",
+            res = False, fit = False)
     fit(latency,50)
     fit.plot(axis = fig.add_subplot(233),
             title = "Data Latency",

@@ -177,7 +177,7 @@ class FE_channel(object):
         try:
             if (len(self.res.items)<self.FIFO_size):
                 self.res.put(data)
-                #self.print_stats()
+                self.print_stats()
                 return lost
             else:
                 raise Full('Channel FIFO is FULL')
@@ -442,8 +442,7 @@ class L1(object):
             msg = yield self.fifoB.get()
         # 8 bits n_CH | 10 bits TDC | n_CH * (16 bits + 10 bits) | 8 bits B_QDC
             # When no active channels -> send a sensor in the center of ASIC
-            delay = float((msg['data'][0]*26 + 8 + 10 + 8))\
-                        *(1.0E9/self.param.P['L1']['L1_outrate'])
+            delay = float((msg['data'][0]*26 + 8 + 10 + 8))*(1.0E9/self.param.P['L1']['L1_outrate'])
             yield self.env.timeout(int(delay))
             msg['out_time'] = self.env.now
             self.out_stream.append(msg)

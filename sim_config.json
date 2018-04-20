@@ -28,11 +28,11 @@
     }, 
     "L1": {
         "frame_process": 10000000.0, 
-        "L1_outrate": 1000000000.0, 
+        "L1_outrate": 800000000.0, 
         "n_asics": 8, 
         "n_L1": 100, 
-        "FIFO_L1b_depth": 256, 
-        "FIFO_L1a_depth": 256, 
+        "FIFO_L1b_depth": 100, 
+        "FIFO_L1a_depth": 160, 
         "buffer_size": 128, 
         "TE": 3
     }

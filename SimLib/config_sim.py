@@ -28,21 +28,21 @@ class SIM_DATA(object):
                                         'sipm_ext_row':232,
                                         'n_rows'      :16},
                         'TOFPET'      :{'n_channels'  :64,
-                                        'outlink_rate':(2.6E9/80)/2,
+                                        'outlink_rate': (2.6E9/80)/2.0,
                                         # 80 bits per TOFPET output frame
                                         'IN_FIFO_depth':4,
                                         'OUT_FIFO_depth':64*4,
                                         'MAX_WILKINSON_LATENCY':5120,
-                                        'TE':2,
+                                        'TE':1,
                                         'TGAIN':1},
-                        'L1'          :{'L1_outrate'    :50E7,
-                                        'frame_process' :20E8,
+                        'L1'          :{'L1_outrate'    :1E9,
+                                        'frame_process' :1E7,
                                         'FIFO_L1a_depth':256,
                                         'FIFO_L1b_depth':256,
                                         'buffer_size'   :128,
                                         'n_asics'       :8,
                                         'n_L1'          :100,
-                                        'TE'            :5 }
+                                        'TE'            :3 }
                        }
         self.config_write()
 

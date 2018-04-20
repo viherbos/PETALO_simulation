@@ -83,9 +83,9 @@ def DAQ_sch(sim_info):
 
     ASICS_I = [DAQ.FE_asic(env     = env,
                          param   = param,
-                         data    = DATA[:,np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],block_size)],
+                         data    = DATA[:,np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1)],
                          timing  = sim_info['timing'],
-                         sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],block_size)],
+                         sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1)],
                          asic_id = i)
              for i in range(n_asics_f_I)]
     if (n_asics_p_I == 1):
@@ -98,18 +98,21 @@ def DAQ_sch(sim_info):
 
     ASICS_O = [DAQ.FE_asic(env     = env,
                          param   = param,
-                         data    = DATA[:,np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],block_size)],
+                         data    = DATA[:,np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],-1)],
                          timing  = sim_info['timing'],
-                         sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],block_size)],
+                         sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],-1)],
                          asic_id = i)
              for i in range(n_asics_f_O)]
     if (n_asics_p_O == 1):
         ASICS_O.append(DAQ.FE_asic(env     = env,
                                    param   = param,
-                                   data    = DATA[:,np.reshape(SiMP_Matrix_I[:,n_asics_f_O*4:],-1)],
+                                   data    = DATA[:,np.reshape(SiMP_Matrix_O[:,n_asics_f_O*4:],-1)],
                                    timing  = sim_info['timing'],
                                    sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_O[:,n_asics_f_O*4:],-1)],
                                    asic_id = n_asics_f_O))
+    # for i in range(len(ASICS_I)):
+    #     print("ASIC %d" % (i))
+    #     print sim_info['Param'].sensors[np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1)]
 
     ASICS_I.extend(ASICS_O)
     ASICS = ASICS_I
@@ -125,12 +128,16 @@ def DAQ_sch(sim_info):
             j += 1
             count = 0
 
-    env.run()
+    env.run(until = 100E9)
 
     gen_output = [L1[i]() for i in range(n_L1)]
 
     elapsed_time = time.time()-start_time
     print ("IT TOOK %d SECONDS TO DO THIS" % elapsed_time)
+
+    print ("Number of L1 Inst : %d \nNumber of ASICS Inst : %d " % (len(L1),len(ASICS)))
+
+
 
     return gen_output
 
@@ -172,7 +179,7 @@ if __name__ == '__main__':
     DATA,sensors,n_events = A.compose()
 
     # Number of events for simulation
-    n_events = 50
+    n_events = 2000
     DATA = DATA[0:n_events,:]
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -187,6 +194,7 @@ if __name__ == '__main__':
     Param = DAQ.parameters(CG,sensors,n_events)
 
     timing = np.random.randint(0,int(1E9/Param.P['ENVIRONMENT']['ch_rate']),size=n_events)
+
     # All sensors are given the same timestamp in an events
     sim_info = {'DATA': DATA, 'timing': timing, 'Param': Param }
 
@@ -198,27 +206,40 @@ if __name__ == '__main__':
     data = []
     for j in range(13):
         for i in range(len(SIM_OUT[j]['data_out'])):
-            if SIM_OUT[j]['data_out'][i]['data'][0] > 0:
-                data.append(SIM_OUT[j]['data_out'][i]['data'])
+            #if SIM_OUT[j]['data_out'][i]['data'][0] > 0:
+            data.append(SIM_OUT[j]['data_out'][i]['data'])
 
     A = np.array(data)
     sort = np.array([i[1] for i in A])
     A = A[np.argsort(sort)]
 
-    last = 0
-    event = 0
-    data   = np.zeros((n_events,6560))
+    n_TDC = np.array([])
+    i_TDC = np.array([])
+    TDC = np.array([A[i][1] for i in range(len(A))])
 
-    for i in A:
-        if i[1] == last:
-            for x in range(i[0]):
-                data[event,int(i[2+x*2])-1000]=i[3+x*2]
-        else:
-            for x in range(i[0]):
-                print int(i[2+x*2])-1000
-                data[event,int(i[2+x*2])-1000]=i[3+x*2]
-            event += 1
-            last = i[1]
+
+    prev=0
+    for i in TDC:
+        if (i != prev):
+            cond = np.array((TDC == i))
+            n_TDC = np.concatenate((n_TDC,[np.sum(cond)]),axis=0)
+            i_TDC = np.concatenate((i_TDC,[i]),axis=0)
+            prev = i
+
+    print i_TDC.shape
+
+    event = 0
+    A_index = 0
+
+    data = np.zeros((n_events,n_sipms),dtype='int32')
+    for i in i_TDC:
+        for j in range(int(n_TDC[event])):
+            for l in range(int(A[A_index][0])):
+                data[event,int(A[A_index][2*l+2])-1000] = A[A_index][2*l+3]
+
+            A_index += 1
+
+        event += 1
 
 
     #print ("A total of %d events processed" % np.array(outlink_ch).sum())

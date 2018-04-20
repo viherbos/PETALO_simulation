@@ -192,7 +192,7 @@ class FE_channel(object):
             else:
                 raise Full('Channel FIFO is FULL')
         except Full as e:
-            #print ("TIME: %s // %s" % (self.env.now,e.value))
+            print ("TIME: %s // %s" % (self.env.now,e.value))
             return (lost+1)
 
     def run(self):
@@ -245,7 +245,7 @@ class FE_outlink(object):
             else:
                 raise Full('OUT LINK FIFO is FULL')
         except Full as e:
-            #print ("TIME: %s // %s" % (self.env.now,e.value))
+            print ("TIME: %s // %s" % (self.env.now,e.value))
             return (lost+1)
 
     def run(self):
@@ -341,7 +341,7 @@ class L1(object):
                 else:
                     sum_QDC += i[0]
             if (n_ch == 0):
-                data_frame.append(1111)
+                data_frame.append(11111)
             # This is for any SiPM in the ASIC
             data_frame.append(sum_QDC)
 
@@ -349,11 +349,11 @@ class L1(object):
 
             # Build Data frame
 
-            out =      {'data'      :data_frame,
+            out.extend([{'data'      :data_frame,
                         'event'     :self.buffer[0,1],
                         'asic_id'   :self.buffer[0,3],
                         'in_time'   :time,
-                        'out_time'  :0}
+                        'out_time'  :0}])
 
             #take all the used data out of the buffer
             cond_not = np.invert(cond)
@@ -390,16 +390,9 @@ class L1(object):
 
             if (self.frame_count == self.param.P['L1']['buffer_size']):
                 out = self.process_frames()
-                yield self.env.timeout(1.0E9/self.param.P['L1']['frame_process'])
-                # Internal RATE
-                # try:
-                #     if (len(self.fifoB.items)<self.param.P['L1']['buffer_size']):
-                self.lostB = self.putB(out,self.lostB)
-                #     else:
-                #         raise Full('L1 FIFO B is FULL')
-                # except Full as e:
-                #     print ("TIME: %s // %s" % (self.env.now,e.value))
-                #     self.lostB = self.lostB + 1
+                for i in out:
+                    yield self.env.timeout(1.0E9/self.param.P['L1']['frame_process'])
+                    self.lostB = self.putB(i,self.lostB)
 
                 self.frame_count = 0
                 #self.flag = False

@@ -9,6 +9,8 @@ sys.path.append("../PETALO_analysis/")
 import fit_library
 import HF_translator as HFT
 import os
+import multiprocessing as mp
+from functools import partial
 from SimLib import DAQ_infinity as DAQ
 from SimLib import HF_files as HF
 import time
@@ -18,18 +20,53 @@ import pandas as pd
 import math
 
 
-def DAQ_sch(sim_info):
+def L1_sch(SiPM_Matrix_Slice, sim_info):
 
+    data_out   = []
     param = sim_info['Param']
+
     env = simpy.Environment()
 
-    start_time = time.time()
+    n_asics = len(SiPM_Matrix_Slice)
 
+    L1 = DAQ.L1( env        = env,
+                 out_stream = data_out,
+                 param      = param,
+                 L1_id      = 0)
+
+    block_size = param.P['TOFPET']['n_channels']
+
+    ASICS_L1 = [DAQ.FE_asic(
+                    env     = env,
+                    param   = param,
+                    data    = DATA[:,SiPM_Matrix_Slice[i]],
+                    timing  = sim_info['timing'],
+                    sensors = sim_info['Param'].sensors[SiPM_Matrix_Slice[i]],
+                    asic_id = i)
+                for i in range(n_asics)]
+
+    for i in range(len(ASICS_L1)):
+        ASICS_L1[i].Link.out = L1
+
+    # Run Simulation for a very long time to force flush of FIFOs
+    env.run(until = 100E9)
+
+    OUTPUT_L1     = L1()
+    OUTPUT_ASICS  = [ASICS_L1[i]() for i in range(n_asics)]
+
+    print "L1 finished"
+
+    return {'L1_out':OUTPUT_L1, 'ASICS_out':OUTPUT_ASICS}
+
+
+
+
+def DAQ_sim(sim_info):
+    param = sim_info['Param']
     # Work out number of SiPMs based on geometry data
     n_sipms_I = param.P['TOPOLOGY']['sipm_int_row']*param.P['TOPOLOGY']['n_rows']
     n_sipms_O = param.P['TOPOLOGY']['sipm_ext_row']*param.P['TOPOLOGY']['n_rows']
     n_sipms     = n_sipms_I + n_sipms_O
-
     # Number of ASICs calculation: Inner Face + Outer Face // full + partial
     n_asics_I = int(math.ceil(float(n_sipms_I) / float(param.P['TOFPET']['n_channels'])))
     n_asics_f_I  = n_sipms_I // param.P['TOFPET']['n_channels']  # Fully used
@@ -38,17 +75,14 @@ def DAQ_sch(sim_info):
     n_asics_f_O  = n_sipms_O // param.P['TOFPET']['n_channels']
     n_asics_p_O   = n_asics_O - n_asics_f_O      # Number of not fully used ASICs (0 or 1)
     n_asics = n_asics_I + n_asics_O
-
     # L1 are required with max number of ASICs in param.P['L1']['n_asics']
     # // full + part
     n_L1 = int(math.ceil(float(n_asics) / float(param.P['L1']['n_asics'])))
     n_L1_f = n_asics // param.P['L1']['n_asics']
     n_L1_p = n_L1 - n_L1_f
 
-
     print ("Number of SiPM : %d \nNumber of ASICS : %d " % (n_sipms,n_asics))
     print ("Number of L1 : %d " % (n_L1))
-
 
     SiMP_Matrix_I = np.reshape(np.arange(0,n_sipms_I),
                                 (param.P['TOPOLOGY']['n_rows'],
@@ -58,93 +92,68 @@ def DAQ_sch(sim_info):
                                 param.P['TOPOLOGY']['sipm_ext_row']))
     # SiPM matrixs Inner face and Outer face
 
+    # Generation of Iterable for pool.map
+    L1_Slice=[]
+    count = 0
 
-
-    #//////////////////////////////////////////////////////////////////////////
-    #////                       SYSTEM INSTANCIATION                       ////
-    #//////////////////////////////////////////////////////////////////////////
-
-    data_out = [[] for i in range(n_L1)]
-
-    L1    = [ DAQ.L1( env        = env,
-                      out_stream = data_out[i],
-                      param      = param,
-                      L1_id      = i)
-              for i in range(n_L1_f)]
-    if (n_L1_p == 1):
-        L1.append(DAQ.L1( env        = env,
-                          out_stream = data_out[n_L1_f],
-                          param      = param,
-                          L1_id      = n_L1_f))
-
-    block_size = param.P['TOFPET']['n_channels']
-
-    ASICS_I = [DAQ.FE_asic(env     = env,
-                         param   = param,
-                         data    = DATA[:,np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1)],
-                         timing  = sim_info['timing'],
-                         sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1)],
-                         asic_id = i)
-             for i in range(n_asics_f_I)]
-    if (n_asics_p_I == 1):
-        ASICS_I.append(DAQ.FE_asic(env     = env,
-                                   param   = param,
-                                   data    = DATA[:,np.reshape(SiMP_Matrix_I[:,n_asics_f_I*4:],-1)],
-                                   timing  = sim_info['timing'],
-                                   sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_I[:,n_asics_f_I*4:],-1)],
-                                   asic_id = n_asics_f_I))
-
-    ASICS_O = [DAQ.FE_asic(env     = env,
-                         param   = param,
-                         data    = DATA[:,np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],-1)],
-                         timing  = sim_info['timing'],
-                         sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],-1)],
-                         asic_id = i)
-             for i in range(n_asics_f_O)]
-    if (n_asics_p_O == 1):
-        ASICS_O.append(DAQ.FE_asic(env     = env,
-                                   param   = param,
-                                   data    = DATA[:,np.reshape(SiMP_Matrix_O[:,n_asics_f_O*4:],-1)],
-                                   timing  = sim_info['timing'],
-                                   sensors = sim_info['Param'].sensors[np.reshape(SiMP_Matrix_O[:,n_asics_f_O*4:],-1)],
-                                   asic_id = n_asics_f_O))
-    # for i in range(len(ASICS_I)):
-    #     print("ASIC %d" % (i))
-    #     print sim_info['Param'].sensors[np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1)]
-
-    ASICS_I.extend(ASICS_O)
-    ASICS = ASICS_I
-
-    # Wiring of ASICS to L1
-    j,count = 0,0
-
-    for i in range(len(ASICS)):
-        ASICS[i].Link.out = L1[j]
+    SiPM_ASIC_Slice=[]
+    # Generate Slice of ASICs (SiPM) for L1
+    for i in range(n_asics_I):
         if (count < param.P['L1']['n_asics']-1):
+            SiPM_ASIC_Slice.append(np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1))
             count += 1
         else:
-            j += 1
+            SiPM_ASIC_Slice.append(np.reshape(SiMP_Matrix_I[:,i*4:(i+1)*4],-1))
+            L1_Slice.append(SiPM_ASIC_Slice)
+            SiPM_ASIC_Slice=[]
             count = 0
 
-    # Run Simulation for a very long time to force flush of FIFOs
-    env.run(until = 100E9)
+    # if (n_asics_p_I == 1):
+    #     L1_Slice.append(SiPM_ASIC_Slice)
 
-    # Gather output information and statistics
-    OUTPUT_L1     = [L1[i]() for i in range(n_L1)]
-    OUTPUT_ASICS  = [ASICS[i]() for i in range(n_asics)]
+
+    for i in range(n_asics_O):
+        if (count < param.P['L1']['n_asics']-1):
+            SiPM_ASIC_Slice.append(np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],-1))
+            count += 1
+        else:
+            SiPM_ASIC_Slice.append(np.reshape(SiMP_Matrix_O[:,i*4:(i+1)*4],-1))
+            L1_Slice.append(SiPM_ASIC_Slice)
+            SiPM_ASIC_Slice=[]
+            count = 0
+
+    if (n_L1_p == 1):
+        L1_Slice.append(SiPM_ASIC_Slice)
+
+    print ("Number of Instanciated L1 = %d" % (len(L1_Slice)))
+    for i in range(len(L1_Slice)):
+        print ("L1 number %d has %d ASICs" % (i,len(L1_Slice[i])))
+
+    # Multiprocess Pool Management
+
+    kargs = {'sim_info':sim_info}
+    DAQ_map = partial(L1_sch, **kargs)
+
+    start_time = time.time()
+    # Multiprocess Work
+    pool_size = mp.cpu_count()//2
+    pool = mp.Pool(processes=pool_size)
+
+    pool_output = pool.map(DAQ_map, [i for i in L1_Slice])
+
+    pool.close()
+    pool.join()
+    #pool_output = DAQ_map(L1_Slice[0])
 
     elapsed_time = time.time()-start_time
-
+    print ("IT TOOK SKYNET %d SECONDS TO RUN THIS SIMULATION" % elapsed_time)
 
     topology = {'n_sipms_I':n_sipms_I, 'n_sipms_O':n_sipms_O, 'n_sipms': n_sipms,
-                'n_asics_I':n_asics_I, 'n_asics_f_I':n_asics_f_I,'n_asics_p_I':n_asics_p_I,
-                'n_asics_O':n_asics_O, 'n_asics_f_O':n_asics_f_O,'n_asics_p_O':n_asics_p_O,
-                'n_asics':n_asics, 'n_L1':n_L1, 'n_L1_f':n_L1_f, 'n_L1_p':n_L1_p}
-    print ("IT TOOK %d SECONDS TO DO THIS" % elapsed_time)
-    print ("Number of L1 Inst : %d \nNumber of ASICS Inst : %d " % (len(L1),len(ASICS)))
+            'n_asics_I':n_asics_I, 'n_asics_f_I':n_asics_f_I,'n_asics_p_I':n_asics_p_I,
+            'n_asics_O':n_asics_O, 'n_asics_f_O':n_asics_f_O,'n_asics_p_O':n_asics_p_O,
+            'n_asics':n_asics, 'n_L1':n_L1, 'n_L1_f':n_L1_f, 'n_L1_p':n_L1_p}
 
-
-    return {'L1_out':OUTPUT_L1, 'ASICS_out':OUTPUT_ASICS}, topology
+    return pool_output,topology
 
 
 
@@ -245,7 +254,7 @@ if __name__ == '__main__':
     n_sipms_ext = CG['TOPOLOGY']['sipm_ext_row']*CG['TOPOLOGY']['n_rows']
     n_sipms     = n_sipms_int + n_sipms_ext
 
-    n_files = 1
+    n_files = 2
     #Number of files to group for data input
     A = HF.hdf_compose( "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
                         "p_FR_infinity_",
@@ -253,7 +262,7 @@ if __name__ == '__main__':
     DATA,sensors,n_events = A.compose()
 
     # Number of events for simulation
-    n_events = 5000
+    n_events = 12000
     DATA = DATA[0:n_events,:]
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -264,17 +273,29 @@ if __name__ == '__main__':
     # data = np.array(pd.read_hdf(filename,key='MC'), dtype = 'int32')
     # SHOW(positions,data,0,True,False)
 
+
     Param = DAQ.parameters(CG,sensors,n_events)
+
     timing = np.random.randint(0,int(1E9/Param.P['ENVIRONMENT']['ch_rate']),size=n_events)
 
     # All sensors are given the same timestamp in an events
     sim_info = {'DATA': DATA, 'timing': timing, 'Param': Param }
 
-    SIM_OUT,topology = DAQ_sch(sim_info)
-    print topology
+    # L1s = range(CG.data['L1']['n_L1'])
+    # pool_output = DAQ_sim(L1s,sim_info)
+
+    pool_out,topology = DAQ_sim(sim_info)
+
+    SIM_OUT = {'L1_out':[], 'ASICS_out':[]}
+
+    for i in range(len(pool_out)):
+        SIM_OUT['L1_out'].append(pool_out[i]['L1_out'])
+        for j in range(len(pool_out[i]['ASICS_out'])):
+            SIM_OUT['ASICS_out'].append(pool_out[i]['ASICS_out'][j])
 
     # Data Output recovery
     out = DAQ_OUTPUT_processing(SIM_OUT,topology['n_L1'],topology['n_asics'])
+
 
 
     # DATA ANALYSIS AND GRAPHS

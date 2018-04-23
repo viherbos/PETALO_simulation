@@ -61,13 +61,9 @@ class DAQ_IO(object):
 
             self.sensors_array = pd.DataFrame( data=self.sensors_xyz,
                                                 columns=['sensor','x','y','z'])
-            self.topology = pd.DataFrame(data = np.array([topology.values()]),
-                                        columns = ['n_sipms_I','n_sipms_O',
-                                                   'n_sipms','n_asics_I',
-                                                   'n_asics_f_I','n_asics_p_I',
-                                                   'n_asics_O','n_asics_f_O',
-                                                   'n_asics_p_O','n_asics',
-                                                   'n_L1','n_L1_f','n_L1_p'])
+            topo_data = np.array(list(topology.values())).reshape(1,len(list(topology.values())))
+            self.topology = pd.DataFrame(data = topo_data,
+                                        columns = list(topology.keys()))
             # complevel and complib are not compatible with MATLAB
             store.put('MC',self.panel_array)
             store.put('sensors',self.sensors_array)

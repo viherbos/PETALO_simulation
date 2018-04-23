@@ -18,6 +18,7 @@ from SimLib import config_sim as CFG
 from SimLib import pet_graphics as PG
 import pandas as pd
 import math
+import argparse
 
 
 def L1_sch(SiPM_Matrix_Slice, sim_info):
@@ -136,7 +137,7 @@ def DAQ_sim(sim_info):
 
     start_time = time.time()
     # Multiprocess Work
-    pool_size = mp.cpu_count()//2
+    pool_size = mp.cpu_count()
     pool = mp.Pool(processes=pool_size)
 
     pool_output = pool.map(DAQ_map, [i for i in L1_Slice])
@@ -246,23 +247,37 @@ def DAQ_OUTPUT_processing(SIM_OUT,n_L1,n_asics):
 
 if __name__ == '__main__':
 
-    CG = CFG.SIM_DATA(filename = "sim_config.json",
-                          read = True)
+    # Argument parser for config file name
+    parser = argparse.ArgumentParser(description='PETALO Infinity DAQ Simulator.')
+    parser.add_argument("-f", "--json_file", action="store_true",
+                        help="Simulate with configuration stored in json file")
+    parser.add_argument('arg1', metavar='N', nargs='?', help='')
+    args = parser.parse_args()
+
+    if args.json_file:
+         file_name = ''.join(args.arg1)
+    else:
+        file_name = "sim_config.json"
+
+    config_file = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + file_name
+
+    CG = CFG.SIM_DATA(filename = config_file,read = True)
     CG = CG.data
     # Read data from json file
+
     n_sipms_int = CG['TOPOLOGY']['sipm_int_row']*CG['TOPOLOGY']['n_rows']
     n_sipms_ext = CG['TOPOLOGY']['sipm_ext_row']*CG['TOPOLOGY']['n_rows']
     n_sipms     = n_sipms_int + n_sipms_ext
 
-    n_files = 2
-    #Number of files to group for data input
-    A = HF.hdf_compose( "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
-                        "p_FR_infinity_",
+    n_files = CG['ENVIRONMENT']['n_files']
+    # Number of files to group for data input
+    A = HF.hdf_compose( CG['ENVIRONMENT']['path_to_files'],
+                        CG['ENVIRONMENT']['file_name'],
                         range(n_files),n_sipms)
     DATA,sensors,n_events = A.compose()
 
     # Number of events for simulation
-    n_events = 12000
+    n_events = CG['ENVIRONMENT']['n_events']
     DATA = DATA[0:n_events,:]
     print (" %d EVENTS IN %d H5 FILES" % (n_events,n_files))
 
@@ -276,29 +291,28 @@ if __name__ == '__main__':
 
     Param = DAQ.parameters(CG,sensors,n_events)
 
-    timing = np.random.randint(0,int(1E9/Param.P['ENVIRONMENT']['ch_rate']),size=n_events)
+    timing = np.random.randint(0,int(1E9/Param.P['ENVIRONMENT']['ch_rate']),
+                                 size=n_events)
 
     # All sensors are given the same timestamp in an events
     sim_info = {'DATA': DATA, 'timing': timing, 'Param': Param }
 
-    # L1s = range(CG.data['L1']['n_L1'])
-    # pool_output = DAQ_sim(L1s,sim_info)
-
+    # Call Simulation Function
     pool_out,topology = DAQ_sim(sim_info)
 
+    # Translate Simulation Output into an array for Data recovery
     SIM_OUT = {'L1_out':[], 'ASICS_out':[]}
-
     for i in range(len(pool_out)):
         SIM_OUT['L1_out'].append(pool_out[i]['L1_out'])
         for j in range(len(pool_out[i]['ASICS_out'])):
             SIM_OUT['ASICS_out'].append(pool_out[i]['ASICS_out'][j])
-
     # Data Output recovery
     out = DAQ_OUTPUT_processing(SIM_OUT,topology['n_L1'],topology['n_asics'])
 
+    #//////////////////////////////////////////////////////////////////
+    #///                     DATA ANALYSIS AND GRAPHS               ///
+    #//////////////////////////////////////////////////////////////////
 
-
-    # DATA ANALYSIS AND GRAPHS
     latency = np.array(out['L1']['out_time'])-np.array(out['L1']['in_time'])
 
     print ("LOST DATA PRODUCER -> CH      = %d" % (out['ASICS']['lost_producers'].sum()))
@@ -310,51 +324,77 @@ if __name__ == '__main__':
 
     fit = fit_library.gauss_fit()
     fig = plt.figure(figsize=(16,8))
-    fit(out['ASICS']['log_channels'][:,0],'sqrt')
+    fit(out['ASICS']['log_channels'][:,0],CG['TOFPET']['IN_FIFO_depth'])
     fit.plot(axis = fig.add_subplot(231),
             title = "ASICS Channel Input analog FIFO (4)",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
-    fit(out['ASICS']['log_outlink'][:,0],'sqrt')
-    fit.plot(axis = fig.add_subplot(234),
+    fig.add_subplot(231).set_yscale('log')
+
+    fit(out['ASICS']['log_outlink'][:,0],CG['TOFPET']['OUT_FIFO_depth'])
+    fit.plot(axis = fig.add_subplot(232),
             title = "ASICS Channels -> Outlink",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
-    fit(out['L1']['logA'][:,0],'sqrt')
+    fig.add_subplot(232).set_yscale('log')
+
+    fit(out['L1']['logA'][:,0],CG['L1']['FIFO_L1a_depth'])
     fit.plot(axis = fig.add_subplot(235),
             title = "ASICS -> L1A (FIFOA)",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
-    fit(out['L1']['logB'][:,0],'sqrt')
-    fit.plot(axis = fig.add_subplot(236),
+    fig.add_subplot(235).set_yscale('log')
+
+    fit(out['L1']['logB'][:,0],CG['L1']['FIFO_L1b_depth'])
+    fit.plot(axis = fig.add_subplot(234),
             title = "L1 OUTPUT (FIFOB)",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
+    fig.add_subplot(234).set_yscale('log')
+
     fit(latency,50)
     fit.plot(axis = fig.add_subplot(233),
             title = "Data Latency",
             xlabel = "Latency in nanoseconds",
             ylabel = "Hits",
             res = False)
-    #
-    #
-    # fig.add_subplot(236)
-    # x_data = fit.bin_centers
-    # y_data = np.add.accumulate(fit.hist_fit)/np.max(np.add.accumulate(fit.hist_fit))
-    # plt.plot(x_data,y_data)
-    # plt.ylim((0.9,1.0))
-    #
+
+    new_axis = fig.add_subplot(236)
+    x_data = fit.bin_centers
+    y_data = np.add.accumulate(fit.hist_fit)/np.max(np.add.accumulate(fit.hist_fit))
+    new_axis.plot(x_data,y_data)
+    new_axis.set_ylim((0.9,1.0))
+    new_axis.set_xlabel("Latency in nanoseconds")
+    new_axis.set_ylabel("Percentage of Recovered Data")
+    new_axis.text(0.05,0.9,(("LOST DATA PRODUCER -> CH           = %d\n" + \
+                             "LOST DATA CHANNELS -> OUTLINK  = %d\n" + \
+                             "LOST DATA OUTLINK -> L1                = %d\n" + \
+                             "LOST DATA L1A -> L1B                      = %d\n" + \
+                             "LOST DATA L1B -> OUTPUT               = %d\n ") % \
+                            (out['ASICS']['lost_producers'].sum(),
+                             out['ASICS']['lost_channels'].sum(),
+                             out['ASICS']['lost_outlink'].sum(),
+                             np.array(out['L1']['lostL1a']).sum(),
+                             np.array(out['L1']['lostL1b']).sum())
+                            ),
+                            fontsize=6,
+                            verticalalignment='top',
+                            horizontalalignment='left',
+                            transform=new_axis.transAxes)
+
     fig.tight_layout()
 
     # Write output to file
-    DAQ_dump = HF.DAQ_IO("/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
-                            "daq_output.h5",
-                            "p_FR_infinity_0.h5",
-                            "daq_out.h5")
+    DAQ_dump = HF.DAQ_IO(CG['ENVIRONMENT']['path_to_files'],
+                    CG['ENVIRONMENT']['file_name'],
+                    CG['ENVIRONMENT']['file_name']+"0.h5",
+                    CG['ENVIRONMENT']['out_file_name']+"_"+ file_name + ".h5")
     DAQ_dump.write_out(out['data'],topology)
 
-    plt.show()
+
+    plt.savefig(CG['ENVIRONMENT']['out_file_name']+"_"+ file_name + ".pdf")
+    #plt.show()

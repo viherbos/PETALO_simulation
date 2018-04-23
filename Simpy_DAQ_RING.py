@@ -120,7 +120,8 @@ if __name__ == '__main__':
                     sensors = sensors,
                     events = n_events,
                     L1_outrate = CG.data['L1']['L1_outrate'],
-                    FIFO_L1_depth = CG.data['L1']['FIFO_L1_depth'],
+                    FIFO_L1a_depth = CG.data['L1']['FIFO_L1a_depth'],
+                    FIFO_L1b_depth = CG.data['L1']['FIFO_L1b_depth'],
                     n_asics = CG.data['L1']['n_asics']
                     )
 

@@ -1,12 +1,7 @@
 {
     "ENVIRONMENT": {
-        "path_to_files": "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/", 
-        "n_files": 3, 
-        "file_name": "p_FR_infinity_", 
-        "out_file_name": "daq_output", 
-        "temperature": 300, 
-        "n_events": 200, 
-        "ch_rate": 1500000.0
+        "ch_rate": 1000000.0, 
+        "temperature": 300
     }, 
     "SIPM": {
         "size": [
@@ -16,14 +11,14 @@
         ]
     }, 
     "L1": {
-        "frame_process": 7000000.0, 
-        "L1_outrate": 700000000.0, 
-        "n_asics": 12, 
-        "n_L1": 10000, 
-        "FIFO_L1b_depth": 256, 
-        "buffer_size": 256, 
-        "FIFO_L1a_depth": 480, 
-        "TE": 4
+        "TE": 3, 
+        "frame_process": 10000000.0, 
+        "buffer_size": 128, 
+        "L1_outrate": 800000000.0, 
+        "FIFO_L1a_depth": 160, 
+        "n_asics": 8, 
+        "n_L1": 100, 
+        "FIFO_L1b_depth": 100
     }, 
     "TOFPET": {
         "TGAIN": 1, 

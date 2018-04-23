@@ -53,7 +53,7 @@ class DAQ_IO(object):
                   dtype='int32'))
         return data,sensors
 
-    def write_out(self,data):
+    def write_out(self,data,topology={}):
         os.chdir(self.path)
         with pd.HDFStore(self.daq_outfile) as store:
             self.panel_array = pd.DataFrame( data=data,
@@ -61,9 +61,13 @@ class DAQ_IO(object):
 
             self.sensors_array = pd.DataFrame( data=self.sensors_xyz,
                                                 columns=['sensor','x','y','z'])
+            topo_data = np.array(list(topology.values())).reshape(1,len(list(topology.values())))
+            self.topology = pd.DataFrame(data = topo_data,
+                                        columns = list(topology.keys()))
             # complevel and complib are not compatible with MATLAB
             store.put('MC',self.panel_array)
             store.put('sensors',self.sensors_array)
+            store.put('topology',self.topology)
             store.close()
 
 

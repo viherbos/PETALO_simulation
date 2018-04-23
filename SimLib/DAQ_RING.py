@@ -24,7 +24,8 @@ class parameters(object):
     def __init__(self,ch_rate,FE_outrate,
                  FIFO_depth,FIFO_out_depth,
                  FE_ch_latency,TE,TGAIN,FE_n_channels,
-                 sensors,events,L1_outrate,FIFO_L1_depth,n_asics):
+                 sensors,events,L1_outrate,FIFO_L1a_depth,FIFO_L1b_depth,
+                 n_asics):
         self.ch_rate     = ch_rate
         self.FE_outrate  = FE_outrate
         self.FIFO_depth  = FIFO_depth
@@ -36,7 +37,8 @@ class parameters(object):
         self.TGAIN      = TGAIN
         self.FE_n_channels = FE_n_channels
         self.L1_outrate = L1_outrate
-        self.FIFO_L1_depth = FIFO_L1_depth
+        self.FIFO_L1a_depth = FIFO_L1a_depth
+        self.FIFO_L1b_depth = FIFO_L1b_depth
         self.n_asics = n_asics
 
 
@@ -54,25 +56,46 @@ class ch_frame(object):
         return np.array([self.data, self.event, self.sensor_id, self.asic_id,
                 self.in_time, self.out_time])
 
-    def put_np_array(self, nparray):
-        aux_list = {'data'      :   nparray[0],
-                    'event'     :   nparray[1],
-                    'sensor_id' :   nparray[2],
-                    'asic_id'   :   nparray[3],
-                    'in_time'   :   nparray[4],
-                    'out_time'  :   nparray[5]}
-
-        self.data       = aux_list['data']
-        self.sensor_id  = aux_list['sensor_id']
-        self.event      = aux_list['event']
-        self.asic_id    = aux_list['asic_id']
-        self.in_time    = aux_list['in_time']
-        self.out_time   = aux_list['out_time']
+    # def put_np_array(self, nparray):
+    #     aux_list = {'data'      :   nparray[0],
+    #                 'event'     :   nparray[1],
+    #                 'sensor_id' :   nparray[2],
+    #                 'asic_id'   :   nparray[3],
+    #                 'in_time'   :   nparray[4],
+    #                 'out_time'  :   nparray[5]}
+    #
+    #     self.data       = aux_list['data']
+    #     self.sensor_id  = aux_list['sensor_id']
+    #     self.event      = aux_list['event']
+    #     self.asic_id    = aux_list['asic_id']
+    #     self.in_time    = aux_list['in_time']
+    #     self.out_time   = aux_list['out_time']
 
     def __repr__(self):
         return "data: {}, event: {}, sensor_id: {}, asic_id: {} in_time:{} out_time:{}".\
             format( self.data, self.event, self.sensor_id, self.asic_id,
                     self.in_time, self.out_time)
+
+
+class L1_outframe(object):
+
+    def __init__(self,data,event,asic_id,in_time,out_time):
+        self.data = data
+        # Lenght of data is not constant, depends on the number of channels being sent
+        # DATA fiels: n_CH | TDC | SENSOR1 | QDC1 | SENSOR2 | QDC2 | ... | B_QDC
+        self.event = event
+        self.asic_id = asic_id
+        self.in_time = in_time
+        self.out_time = out_time
+
+    def get_np_array(self):
+        B = [ self.event, self.asic_id, self.in_time, self.out_time]
+        return np.concatenate((self.data,B),axis=0)
+
+    def __repr__(self):
+        return "data: {}, event: {}, asic_id: {} in_time:{} out_time:{}".\
+            format(self.data,self.event,self.asic_id,self.in_time,self.out_time)
+
 
 
 class producer(object):
@@ -277,9 +300,10 @@ class L1(object):
         self.Param      = param
         self.L1_id      = L1_id
         self.out_stream = out_stream
-        self.latency = int(1E9/param.L1_outrate)
-        self.res = simpy.Store(self.env,capacity=param.FIFO_L1_depth)
-        self.action = env.process(self.run())
+        self.latency    = int(1E9/param.L1_outrate)
+        self.res        = simpy.Store(self.env,capacity=param.FIFO_L1a_depth)
+        self.res_out    = simpy.Store(self.env,capacity=param.FIFO_L1b_depth)
+        self.action     = env.process(self.run())
 
 
     def put(self,data,lost):

@@ -9,6 +9,7 @@ from pyqtgraph.opengl.GLGraphicsItem import GLGraphicsItem
 from pyqtgraph.Qt import QtCore, QtGui
 import config_sim as conf
 
+""" OBSOLETE """
 
 class GLTextItem(GLGraphicsItem):
     def __init__(self, X=None, Y=None, Z=None, text=None, size=7):

@@ -19,34 +19,47 @@ class SIM_DATA(object):
         else:
             # These are default values.
             # L1 output data frame = QDC[10] + TDC[10] + SiPM[20] = 40 bits
-            self.data= {'ENVIRONMENT'  :{'ch_rate'     :1000E3,
-                                        'temperature' :300},
+            self.data= {'ENVIRONMENT'  :{'ch_rate'     :1500E3,
+                                        'temperature' :300,
+                                        'path_to_files': "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
+                                        'file_name': "p_FR_infinity_",
+                                        'out_file_name':"daq_output",
+                                        'n_files' : 5,
+                                        'n_events': 300},
+
                         'SIPM'        :{'size'        :[1,3,3]},
-                        'TOPOLOGY'    :{'radius_int'   :108,
-                                        'radius_ext'   :158,
-                                        'sipm_int_row':12*8,
-                                        'sipm_ext_row':12*8,
-                                        'n_rows'      :8
-                                        },
+
+                        'TOPOLOGY'    :{'radius_int'   :1000,
+                                        'radius_ext'   :1000,
+                                        'sipm_int_row':178,
+                                        'sipm_ext_row':232,
+                                        'n_rows'      :16},
+
                         'TOFPET'      :{'n_channels'  :64,
-                                        'outlink_rate':(2.6E9/80)/2,
+                                        'outlink_rate': (2.6E9/80)/2.0,
+                                        # 80 bits per TOFPET output frame
                                         'IN_FIFO_depth':4,
                                         'OUT_FIFO_depth':64*4,
                                         'MAX_WILKINSON_LATENCY':5120,
-                                        'TE':5,
+                                        'TE':1,
                                         'TGAIN':1},
-                        'L1'          :{'L1_outrate'    :(2.0E9/40),
-                                        'FIFO_L1_depth' :1024,
-                                        'n_asics'       :8,
-                                        'n_L1'          :3 }
+
+                        'L1'          :{'L1_outrate'    :7E8,
+                                        'frame_process' :7E6,
+                                        'FIFO_L1a_depth':480,
+                                        'FIFO_L1b_depth':256,
+                                        'buffer_size'   :256,
+                                        'n_asics'       :12,
+                                        'n_L1'          :10000,
+                                        'TE'            :4 }
                        }
-        self.config_write()
 
     def config_write(self):
         writeName = self.filename
         try:
             with open(writeName,'w') as outfile:
                 json.dump(self.data, outfile, indent=4, sort_keys=False)
+                print self.data
         except IOError as e:
             print(e)
 
@@ -54,11 +67,14 @@ class SIM_DATA(object):
         try:
             with open(self.filename,'r') as infile:
                 self.data = json.load(infile)
+                print self.data
         except IOError as e:
             print(e)
 
 
 
 if __name__ == '__main__':
-    SIM=SIM_DATA(read=False)
-    print SIM.data
+
+    SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + "sim_config1.json",
+                 read = False)
+    SIM.config_write()

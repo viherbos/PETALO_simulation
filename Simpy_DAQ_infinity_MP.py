@@ -25,6 +25,7 @@ def L1_sch(SiPM_Matrix_Slice, sim_info):
 
     data_out   = []
     param = sim_info['Param']
+    DATA  = sim_info['DATA']
 
     env = simpy.Environment()
 
@@ -257,9 +258,9 @@ if __name__ == '__main__':
     if args.json_file:
          file_name = ''.join(args.arg1)
     else:
-        file_name = "sim_config.json"
+        file_name = "sim_config"
 
-    config_file = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + file_name
+    config_file = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + file_name + ".json"
 
     CG = CFG.SIM_DATA(filename = config_file,read = True)
     CG = CG.data

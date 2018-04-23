@@ -5,7 +5,7 @@ import scipy as sp
 import matplotlib.pyplot as plt
 from simpy.events import AnyOf, AllOf, Event
 import sys
-sys.path.append("../PETALO_analysis/")
+#sys.path.append('''..\PETALO_analysis''')
 import fit_library
 import HF_translator as HFT
 import os
@@ -257,9 +257,9 @@ if __name__ == '__main__':
     if args.json_file:
          file_name = ''.join(args.arg1)
     else:
-        file_name = "sim_config.json"
+        file_name = "sim_config1.json"
 
-    config_file = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + file_name
+    config_file = "../../DAQ_DATA/NEUTRINOS/CONT_RING/" + file_name
 
     CG = CFG.SIM_DATA(filename = config_file,read = True)
     CG = CG.data

@@ -21,7 +21,7 @@ class SIM_DATA(object):
             # L1 output data frame = QDC[10] + TDC[10] + SiPM[20] = 40 bits
             self.data= {'ENVIRONMENT'  :{'ch_rate'     :1500E3,
                                         'temperature' :300,
-                                        'path_to_files': "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
+                                        'path_to_files': "F:/Users/viherbos/Documents/DAQ_DATA/NEUTRINOS/CONT_RING/",
                                         'file_name': "p_FR_infinity_",
                                         'out_file_name':"daq_output",
                                         'n_files' : 5,
@@ -75,6 +75,6 @@ class SIM_DATA(object):
 
 if __name__ == '__main__':
 
-    SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + "sim_config1.json",
+    SIM=SIM_DATA(filename = "../../DAQ_DATA/NEUTRINOS/CONT_RING/" + "sim_config1.json",
                  read = False)
     SIM.config_write()

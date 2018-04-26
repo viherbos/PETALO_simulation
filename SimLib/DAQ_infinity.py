@@ -337,7 +337,6 @@ class L1(object):
         self.flag       = False
         self.frame_count = 0
         self.lostB      = 0
-        self.lostA      = 0
         self.action1    = env.process(self.runA())
         self.action2    = env.process(self.runB())
         self.logA = np.array([]).reshape(0,2)
@@ -449,8 +448,7 @@ class L1(object):
 
 
     def __call__(self):
-        output = {  'lostL1a':self.lostA,
-                    'lostL1b':self.lostB,
+        output = {  'lostL1b':self.lostB,
                     'logA'   :self.logA,
                     'logB'   :self.logB,
                     'data_out':self.out_stream}

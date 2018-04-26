@@ -24,8 +24,8 @@ class SIM_DATA(object):
                                         'path_to_files': "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
                                         'file_name': "p_FR_infinity_",
                                         'out_file_name':"daq_output",
-                                        'n_files' : 5,
-                                        'n_events': 300},
+                                        'n_files' : 8,
+                                        'n_events': 25000},
 
                         'SIPM'        :{'size'        :[1,3,3]},
 
@@ -44,11 +44,11 @@ class SIM_DATA(object):
                                         'TE':1,
                                         'TGAIN':1},
 
-                        'L1'          :{'L1_outrate'    :7E8,
-                                        'frame_process' :7E6,
-                                        'FIFO_L1a_depth':480,
+                        'L1'          :{'L1_outrate'    :700E6,
+                                        'frame_process' :10E6,
+                                        'FIFO_L1a_depth':512,
                                         'FIFO_L1b_depth':256,
-                                        'buffer_size'   :256,
+                                        'buffer_size'   :480,
                                         'n_asics'       :12,
                                         'n_L1'          :10000,
                                         'TE'            :4 }
@@ -75,6 +75,7 @@ class SIM_DATA(object):
 
 if __name__ == '__main__':
 
-    SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + "sim_config1.json",
+    filename = "R7"
+    SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/"+filename+".json",
                  read = False)
     SIM.config_write()

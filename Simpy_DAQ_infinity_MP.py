@@ -138,7 +138,7 @@ def DAQ_sim(sim_info):
 
     start_time = time.time()
     # Multiprocess Work
-    pool_size = mp.cpu_count()
+    pool_size = mp.cpu_count()//2
     pool = mp.Pool(processes=pool_size)
 
     pool_output = pool.map(DAQ_map, [i for i in L1_Slice])
@@ -186,7 +186,7 @@ def DAQ_OUTPUT_processing(SIM_OUT,n_L1,n_asics):
 
     # Gather information from L1 layer
     for j in range(n_L1):
-        lostL1a.append(SIM_OUT_L1[j]['lostL1a'])
+        #lostL1a.append(SIM_OUT_L1[j]['lostL1a'])
         lostL1b.append(SIM_OUT_L1[j]['lostL1b'])
         logA=np.vstack([logA,SIM_OUT_L1[j]['logA']])
         logB=np.vstack([logB,SIM_OUT_L1[j]['logB']])
@@ -232,8 +232,7 @@ def DAQ_OUTPUT_processing(SIM_OUT,n_L1,n_asics):
 
     output = {'data': data,
               'L1': {'in_time': in_time, 'out_time': out_time,
-                     'lostL1a': lostL1a, 'lostL1b': lostL1b,
-                     'logA': logA, 'logB': logB},
+                     'lostL1b': lostL1b, 'logA': logA, 'logB': logB},
               'ASICS':{ 'lost_producers':lost_producers,
                         'lost_channels':lost_channels,
                         'lost_outlink':lost_outlink,
@@ -258,7 +257,7 @@ if __name__ == '__main__':
     if args.json_file:
          file_name = ''.join(args.arg1)
     else:
-        file_name = "sim_config"
+        file_name = "R3"
 
     config_file = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + file_name + ".json"
 
@@ -318,10 +317,16 @@ if __name__ == '__main__':
 
     print ("LOST DATA PRODUCER -> CH      = %d" % (out['ASICS']['lost_producers'].sum()))
     print ("LOST DATA CHANNELS -> OUTLINK = %d" % (out['ASICS']['lost_channels'].sum()))
-    print ("LOST DATA OUTLINK -> L1       = %d" % (out['ASICS']['lost_outlink'].sum()))
-    print ("LOST DATA L1A -> L1B          = %d" % (np.array(out['L1']['lostL1a']).sum()))
-    print ("LOST DATA L1B -> OUTPUT       = %d" % (np.array(out['L1']['lostL1b']).sum()))
+    print ("LOST DATA OUTLINK  -> L1      = %d" % (out['ASICS']['lost_outlink'].sum()))
+    print ("LOST DATA L1A -> L1B          = %d" % (np.array(out['L1']['lostL1b']).sum()))
 
+    WC_CH_FIFO    = float(max(out['ASICS']['log_channels'][:,0])/CG['TOFPET']['IN_FIFO_depth'])*100
+    WC_OLINK_FIFO = float(max(out['ASICS']['log_outlink'][:,0])/CG['TOFPET']['OUT_FIFO_depth'])*100
+    WC_L1_A_FIFO  = float(max(out['L1']['logA'][:,0])/CG['L1']['FIFO_L1a_depth'])*100
+    WC_L1_B_FIFO  = float(max(out['L1']['logB'][:,0])/CG['L1']['FIFO_L1b_depth'])*100
+
+
+    print ()
 
     fit = fit_library.gauss_fit()
     fig = plt.figure(figsize=(16,8))
@@ -332,7 +337,12 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(231).set_yscale('log')
-
+    fig.add_subplot(231).text(0.4,0.9,(("ASIC Input FIFO reached %.1f %%" % \
+                                            (WC_CH_FIFO))),
+                                            fontsize=8,
+                                            verticalalignment='top',
+                                            horizontalalignment='left',
+                                            transform=fig.add_subplot(231).transAxes)
     fit(out['ASICS']['log_outlink'][:,0],CG['TOFPET']['OUT_FIFO_depth'])
     fit.plot(axis = fig.add_subplot(232),
             title = "ASICS Channels -> Outlink",
@@ -340,7 +350,12 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(232).set_yscale('log')
-
+    fig.add_subplot(232).text(0.4,0.9,(("ASIC Outlink FIFO reached %.1f %%" % \
+                                            (WC_OLINK_FIFO))),
+                                            fontsize=8,
+                                            verticalalignment='top',
+                                            horizontalalignment='left',
+                                            transform=fig.add_subplot(232).transAxes)
     fit(out['L1']['logA'][:,0],CG['L1']['FIFO_L1a_depth'])
     fit.plot(axis = fig.add_subplot(235),
             title = "ASICS -> L1A (FIFOA)",
@@ -348,7 +363,12 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(235).set_yscale('log')
-
+    fig.add_subplot(235).text(0.4,0.9,(("L1_A FIFO reached %.1f %%" % \
+                                            (WC_L1_A_FIFO))),
+                                            fontsize=8,
+                                            verticalalignment='top',
+                                            horizontalalignment='left',
+                                            transform=fig.add_subplot(235).transAxes)
     fit(out['L1']['logB'][:,0],CG['L1']['FIFO_L1b_depth'])
     fit.plot(axis = fig.add_subplot(234),
             title = "L1 OUTPUT (FIFOB)",
@@ -356,14 +376,24 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(234).set_yscale('log')
-
+    fig.add_subplot(234).text(0.4,0.9,(("L1_B FIFO reached %.1f %%" % \
+                                            (WC_L1_B_FIFO))),
+                                            fontsize=8,
+                                            verticalalignment='top',
+                                            horizontalalignment='left',
+                                            transform=fig.add_subplot(234).transAxes)
     fit(latency,50)
     fit.plot(axis = fig.add_subplot(233),
             title = "Data Latency",
             xlabel = "Latency in nanoseconds",
             ylabel = "Hits",
             res = False)
-
+    fig.add_subplot(233).text(0.4,0.9,(("WORST LATENCY = %d ns" % \
+                                            (max(latency)))),
+                                            fontsize=8,
+                                            verticalalignment='top',
+                                            horizontalalignment='left',
+                                            transform=fig.add_subplot(233).transAxes)
     new_axis = fig.add_subplot(236)
     x_data = fit.bin_centers
     y_data = np.add.accumulate(fit.hist_fit)/np.max(np.add.accumulate(fit.hist_fit))
@@ -374,15 +404,13 @@ if __name__ == '__main__':
     new_axis.text(0.05,0.9,(("LOST DATA PRODUCER -> CH           = %d\n" + \
                              "LOST DATA CHANNELS -> OUTLINK  = %d\n" + \
                              "LOST DATA OUTLINK -> L1                = %d\n" + \
-                             "LOST DATA L1A -> L1B                      = %d\n" + \
-                             "LOST DATA L1B -> OUTPUT               = %d\n ") % \
+                             "LOST DATA L1A -> L1B                      = %d\n") % \
                             (out['ASICS']['lost_producers'].sum(),
                              out['ASICS']['lost_channels'].sum(),
                              out['ASICS']['lost_outlink'].sum(),
-                             np.array(out['L1']['lostL1a']).sum(),
                              np.array(out['L1']['lostL1b']).sum())
                             ),
-                            fontsize=6,
+                            fontsize=8,
                             verticalalignment='top',
                             horizontalalignment='left',
                             transform=new_axis.transAxes)
@@ -394,7 +422,20 @@ if __name__ == '__main__':
                     CG['ENVIRONMENT']['file_name'],
                     CG['ENVIRONMENT']['file_name']+"0.h5",
                     CG['ENVIRONMENT']['out_file_name']+"_"+ file_name + ".h5")
-    DAQ_dump.write_out(out['data'],topology)
+    logs = {  'logA':out['L1']['logA'],
+              'logB':out['L1']['logB'],
+              'log_channels':out['ASICS']['log_channels'],
+              'log_outlink': out['ASICS']['log_outlink'],
+              'in_time': out['L1']['in_time'],
+              'out_time': out['L1']['out_time'],
+              'lost':{  'producers':out['ASICS']['lost_producers'].sum(),
+                        'channels' :out['ASICS']['lost_channels'].sum(),
+                        'outlink'  :out['ASICS']['lost_outlink'].sum(),
+                        'L1b'      :np.array(out['L1']['lostL1b']).sum()
+                      }
+            }
+
+    DAQ_dump.write_out(out['data'],topology,logs)
 
 
     plt.savefig(CG['ENVIRONMENT']['out_file_name']+"_"+ file_name + ".pdf")

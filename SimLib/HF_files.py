@@ -53,21 +53,43 @@ class DAQ_IO(object):
                   dtype='int32'))
         return data,sensors
 
-    def write_out(self,data,topology={}):
+    def write_out(self,data,topology={},logs={}):
         os.chdir(self.path)
-        with pd.HDFStore(self.daq_outfile) as store:
+        with pd.HDFStore(self.daq_outfile,
+                        complevel=9, complib='zlib') as store:
             self.panel_array = pd.DataFrame( data=data,
                                              columns=self.sensors_xyz[:,0])
 
             self.sensors_array = pd.DataFrame( data=self.sensors_xyz,
                                                 columns=['sensor','x','y','z'])
             topo_data = np.array(list(topology.values())).reshape(1,len(list(topology.values())))
-            self.topology = pd.DataFrame(data = topo_data,
-                                        columns = list(topology.keys()))
+            logA         = np.array(logs['logA'])
+            logB         = np.array(logs['logB'])
+            log_channels = np.array(logs['log_channels'])
+            log_outlink = np.array(logs['log_outlink'])
+            log_in_time = np.array(logs['in_time'])
+            log_out_time = np.array(logs['out_time'])
+
+            topo = pd.DataFrame(data = topo_data,columns = list(topology.keys()))
+            logA = pd.DataFrame(data = logA)
+            logB = pd.DataFrame(data = logB)
+            log_channels = pd.DataFrame(data = log_channels)
+            log_outlink  = pd.DataFrame(data = log_outlink)
+            log_in_time  = pd.DataFrame(data = log_in_time)
+            log_out_time  = pd.DataFrame(data = log_out_time)
+            lost_data = np.array(list(logs['lost'].values())).reshape(1,-1)
+            lost = pd.DataFrame(data = lost_data,columns = list(logs['lost'].keys()))
             # complevel and complib are not compatible with MATLAB
             store.put('MC',self.panel_array)
             store.put('sensors',self.sensors_array)
-            store.put('topology',self.topology)
+            store.put('topology',topo)
+            store.put('logA',logA)
+            store.put('logB',logB)
+            store.put('log_channels',log_channels)
+            store.put('log_outlink',log_outlink)
+            store.put('in_time',log_in_time)
+            store.put('out_time',log_out_time)
+            store.put('lost',lost)
             store.close()
 
 

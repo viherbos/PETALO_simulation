@@ -41,13 +41,13 @@ class SIM_DATA(object):
                                         'IN_FIFO_depth':4,
                                         'OUT_FIFO_depth':64*4,
                                         'MAX_WILKINSON_LATENCY':5120,
-                                        'TE':1,
+                                        'TE':2,
                                         'TGAIN':1},
 
                         'L1'          :{'L1_outrate'    :700E6,
                                         'frame_process' :10E6,
                                         'FIFO_L1a_depth':512,
-                                        'FIFO_L1b_depth':256,
+                                        'FIFO_L1b_depth':128,
                                         'buffer_size'   :480,
                                         'n_asics'       :12,
                                         'n_L1'          :10000,
@@ -75,7 +75,7 @@ class SIM_DATA(object):
 
 if __name__ == '__main__':
 
-    filename = "R7"
+    filename = "T1"
     SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/"+filename+".json",
                  read = False)
     SIM.config_write()

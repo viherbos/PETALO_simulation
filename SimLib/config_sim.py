@@ -24,15 +24,15 @@ class SIM_DATA(object):
                                         'path_to_files': "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
                                         'file_name': "p_FR_infinity_",
                                         'out_file_name':"daq_output",
-                                        'n_files' : 8,
-                                        'n_events': 25000},
+                                        'n_files' : 1,
+                                        'n_events': 5700},
 
                         'SIPM'        :{'size'        :[1,3,3]},
 
-                        'TOPOLOGY'    :{'radius_int'   :1000,
-                                        'radius_ext'   :1000,
-                                        'sipm_int_row':178,
-                                        'sipm_ext_row':232,
+                        'TOPOLOGY'    :{'radius_int'   :994,
+                                        'radius_ext'   :1294,
+                                        'sipm_int_row':157,
+                                        'sipm_ext_row':204,
                                         'n_rows'      :16},
 
                         'TOFPET'      :{'n_channels'  :64,
@@ -44,14 +44,14 @@ class SIM_DATA(object):
                                         'TE':2,
                                         'TGAIN':1},
 
-                        'L1'          :{'L1_outrate'    :700E6,
+                        'L1'          :{'L1_outrate'    :200E6,
                                         'frame_process' :10E6,
                                         'FIFO_L1a_depth':512,
                                         'FIFO_L1b_depth':128,
                                         'buffer_size'   :480,
                                         'n_asics'       :12,
                                         'n_L1'          :10000,
-                                        'TE'            :4 }
+                                        'TE'            :7 }
                        }
 
     def config_write(self):
@@ -75,7 +75,7 @@ class SIM_DATA(object):
 
 if __name__ == '__main__':
 
-    filename = "T1"
-    SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/"+filename+".json",
+    filename = "infinity_4mm"
+    SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/LESS_4mm/"+filename+".json",
                  read = False)
     SIM.config_write()

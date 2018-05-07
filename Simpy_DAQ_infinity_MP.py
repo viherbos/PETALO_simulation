@@ -138,7 +138,7 @@ def DAQ_sim(sim_info):
 
     start_time = time.time()
     # Multiprocess Work
-    pool_size = mp.cpu_count()//2
+    pool_size = mp.cpu_count() // 2
     pool = mp.Pool(processes=pool_size)
 
     pool_output = pool.map(DAQ_map, [i for i in L1_Slice])

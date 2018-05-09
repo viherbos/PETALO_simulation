@@ -138,7 +138,7 @@ def DAQ_sim(sim_info):
 
     start_time = time.time()
     # Multiprocess Work
-    pool_size = mp.cpu_count() // 2
+    pool_size = mp.cpu_count() #// 2
     pool = mp.Pool(processes=pool_size)
 
     pool_output = pool.map(DAQ_map, [i for i in L1_Slice])
@@ -252,16 +252,23 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--json_file", action="store_true",
                         help="Simulate with configuration stored in json file")
     parser.add_argument('arg1', metavar='N', nargs='?', help='')
+    parser.add_argument("-d", "--directory", action="store_true",
+                        help="Work directory")
+    parser.add_argument('arg2', metavar='N', nargs='?', help='')
     args = parser.parse_args()
 
     if args.json_file:
-         file_name = ''.join(args.arg1)
+        file_name = ''.join(args.arg1)
     else:
-        file_name = "R3"
+        file_name = "sim_config"
+    if args.directory:
+        path = ''.join(args.arg2)
+    else:
+        path="./"
 
-    config_file = "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/" + file_name + ".json"
+    config_file = file_name + ".json"
 
-    CG = CFG.SIM_DATA(filename = config_file,read = True)
+    CG = CFG.SIM_DATA(filename = path + config_file, read = True)
     CG = CG.data
     # Read data from json file
 

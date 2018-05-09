@@ -21,11 +21,11 @@ class SIM_DATA(object):
             # L1 output data frame = QDC[10] + TDC[10] + SiPM[20] = 40 bits
             self.data= {'ENVIRONMENT'  :{'ch_rate'     :1500E3,
                                         'temperature' :300,
-                                        'path_to_files': "/home/viherbos/DAQ_DATA/NEUTRINOS/CONT_RING/",
-                                        'file_name': "p_FR_infinity_",
+                                        'path_to_files': "/home/viherbos/DAQ_DATA/NEUTRINOS/LESS_4mm/",
+                                        'file_name': "p_FR_infinity_4mm_",
                                         'out_file_name':"daq_output",
-                                        'n_files' : 1,
-                                        'n_events': 5700},
+                                        'n_files' : 7,
+                                        'n_events': 30000},
 
                         'SIPM'        :{'size'        :[1,3,3]},
 
@@ -44,14 +44,13 @@ class SIM_DATA(object):
                                         'TE':2,
                                         'TGAIN':1},
 
-                        'L1'          :{'L1_outrate'    :200E6,
+                        'L1'          :{'L1_outrate'    :650E6,
                                         'frame_process' :10E6,
                                         'FIFO_L1a_depth':512,
-                                        'FIFO_L1b_depth':128,
-                                        'buffer_size'   :480,
-                                        'n_asics'       :12,
-                                        'n_L1'          :10000,
-                                        'TE'            :7 }
+                                        'FIFO_L1b_depth':256,
+                                        'buffer_size'   :400,
+                                        'n_asics'       :16,
+                                        'TE'            :5 }
                        }
 
     def config_write(self):
@@ -75,7 +74,7 @@ class SIM_DATA(object):
 
 if __name__ == '__main__':
 
-    filename = "infinity_4mm"
+    filename = "infinity_4mm_16_2_5_buf400"
     SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/LESS_4mm/"+filename+".json",
                  read = False)
     SIM.config_write()

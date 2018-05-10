@@ -215,8 +215,7 @@ def DAQ_OUTPUT_processing(SIM_OUT,n_L1,n_asics):
             i_TDC = np.concatenate((i_TDC,[i]),axis=0)
             prev = i
 
-    print i_TDC.shape
-
+    # Data table building
     event = 0
     A_index = 0
 
@@ -230,6 +229,12 @@ def DAQ_OUTPUT_processing(SIM_OUT,n_L1,n_asics):
 
         event += 1
 
+    n_words = np.zeros(len(A))
+    # Buffer compression statistic
+    for i in range(len(A)):
+        n_words[i] = A[i][0]
+
+
     output = {'data': data,
               'L1': {'in_time': in_time, 'out_time': out_time,
                      'lostL1b': lostL1b, 'logA': logA, 'logB': logB},
@@ -237,7 +242,8 @@ def DAQ_OUTPUT_processing(SIM_OUT,n_L1,n_asics):
                         'lost_channels':lost_channels,
                         'lost_outlink':lost_outlink,
                         'log_channels':log_channels,
-                        'log_outlink':log_outlink}
+                        'log_outlink':log_outlink},
+              'compress': n_words
             }
 
 
@@ -333,75 +339,79 @@ if __name__ == '__main__':
     WC_L1_B_FIFO  = float(max(out['L1']['logB'][:,0])/CG['L1']['FIFO_L1b_depth'])*100
 
 
-    print ()
+    print ("\n \n BYE \n \n")
 
     fit = fit_library.gauss_fit()
-    fig = plt.figure(figsize=(16,8))
+    fig = plt.figure(figsize=(20,8))
+
     fit(out['ASICS']['log_channels'][:,0],CG['TOFPET']['IN_FIFO_depth'])
-    fit.plot(axis = fig.add_subplot(231),
+    fit.plot(axis = fig.add_subplot(241),
             title = "ASICS Channel Input analog FIFO (4)",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
-    fig.add_subplot(231).set_yscale('log')
-    fig.add_subplot(231).text(0.4,0.9,(("ASIC Input FIFO reached %.1f %%" % \
+    fig.add_subplot(241).set_yscale('log')
+    fig.add_subplot(241).text(0.4,0.9,(("ASIC Input FIFO reached %.1f %%" % \
                                             (WC_CH_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
                                             horizontalalignment='left',
-                                            transform=fig.add_subplot(231).transAxes)
+                                            transform=fig.add_subplot(241).transAxes)
+
     fit(out['ASICS']['log_outlink'][:,0],CG['TOFPET']['OUT_FIFO_depth'])
-    fit.plot(axis = fig.add_subplot(232),
+    fit.plot(axis = fig.add_subplot(242),
             title = "ASICS Channels -> Outlink",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
-    fig.add_subplot(232).set_yscale('log')
-    fig.add_subplot(232).text(0.4,0.9,(("ASIC Outlink FIFO reached %.1f %%" % \
+    fig.add_subplot(242).set_yscale('log')
+    fig.add_subplot(242).text(0.4,0.9,(("ASIC Outlink FIFO reached %.1f %%" % \
                                             (WC_OLINK_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
                                             horizontalalignment='left',
-                                            transform=fig.add_subplot(232).transAxes)
+                                            transform=fig.add_subplot(242).transAxes)
+
     fit(out['L1']['logA'][:,0],CG['L1']['FIFO_L1a_depth'])
-    fit.plot(axis = fig.add_subplot(235),
+    fit.plot(axis = fig.add_subplot(246),
             title = "ASICS -> L1A (FIFOA)",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
-    fig.add_subplot(235).set_yscale('log')
-    fig.add_subplot(235).text(0.4,0.9,(("L1_A FIFO reached %.1f %%" % \
+    fig.add_subplot(246).set_yscale('log')
+    fig.add_subplot(246).text(0.4,0.9,(("L1_A FIFO reached %.1f %%" % \
                                             (WC_L1_A_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
                                             horizontalalignment='left',
-                                            transform=fig.add_subplot(235).transAxes)
+                                            transform=fig.add_subplot(246).transAxes)
+
     fit(out['L1']['logB'][:,0],CG['L1']['FIFO_L1b_depth'])
-    fit.plot(axis = fig.add_subplot(234),
+    fit.plot(axis = fig.add_subplot(245),
             title = "L1 OUTPUT (FIFOB)",
             xlabel = "FIFO Occupancy",
             ylabel = "Hits",
             res = False, fit = False)
-    fig.add_subplot(234).set_yscale('log')
-    fig.add_subplot(234).text(0.4,0.9,(("L1_B FIFO reached %.1f %%" % \
+    fig.add_subplot(245).set_yscale('log')
+    fig.add_subplot(245).text(0.4,0.9,(("L1_B FIFO reached %.1f %%" % \
                                             (WC_L1_B_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
                                             horizontalalignment='left',
-                                            transform=fig.add_subplot(234).transAxes)
+                                            transform=fig.add_subplot(245).transAxes)
     fit(latency,50)
-    fit.plot(axis = fig.add_subplot(233),
+    fit.plot(axis = fig.add_subplot(243),
             title = "Data Latency",
             xlabel = "Latency in nanoseconds",
             ylabel = "Hits",
             res = False)
-    fig.add_subplot(233).text(0.4,0.9,(("WORST LATENCY = %d ns" % \
+    fig.add_subplot(243).text(0.4,0.9,(("WORST LATENCY = %d ns" % \
                                             (max(latency)))),
                                             fontsize=8,
                                             verticalalignment='top',
                                             horizontalalignment='left',
-                                            transform=fig.add_subplot(233).transAxes)
-    new_axis = fig.add_subplot(236)
+                                            transform=fig.add_subplot(243).transAxes)
+    new_axis = fig.add_subplot(247)
     x_data = fit.bin_centers
     y_data = np.add.accumulate(fit.hist_fit)/np.max(np.add.accumulate(fit.hist_fit))
     new_axis.plot(x_data,y_data)
@@ -422,6 +432,25 @@ if __name__ == '__main__':
                             horizontalalignment='left',
                             transform=new_axis.transAxes)
 
+
+    fit(out['compress'],int(np.max(out['compress'])))
+    fit.plot(axis = fig.add_subplot(244),
+            title = "Data Frame Lenght (Compression)",
+            xlabel = "Number of QDC fields",
+            ylabel = "Hits",
+            res = False,
+            fit = False)
+
+    # TOTAL NUMBER OF BITS vs COMPRESS EFFICIENCY
+    A = np.arange(0,int(np.max(out['compress'])),1)
+    D = A * 26 + + 8 + 10 + 8     #see DAQ_infinity
+    B = np.multiply(D,fit.hist)
+    new_axis_2 = fig.add_subplot(248)
+    x_data = fit.bin_centers
+    new_axis_2.bar(x_data,B)
+
+
+
     fig.tight_layout()
 
     # Write output to file
@@ -439,7 +468,8 @@ if __name__ == '__main__':
                         'channels' :out['ASICS']['lost_channels'].sum(),
                         'outlink'  :out['ASICS']['lost_outlink'].sum(),
                         'L1b'      :np.array(out['L1']['lostL1b']).sum()
-                      }
+                      },
+              'compress':out['compress']
             }
 
     DAQ_dump.write_out(out['data'],topology,logs)

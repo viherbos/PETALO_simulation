@@ -25,7 +25,7 @@ class SIM_DATA(object):
                                         'file_name': "p_FR_infinity_4mm_",
                                         'out_file_name':"daq_output",
                                         'n_files' : 7,
-                                        'n_events': 30000},
+                                        'n_events': 1000},
 
                         'SIPM'        :{'size'        :[1,3,3]},
 
@@ -48,7 +48,7 @@ class SIM_DATA(object):
                                         'frame_process' :10E6,
                                         'FIFO_L1a_depth':512,
                                         'FIFO_L1b_depth':256,
-                                        'buffer_size'   :400,
+                                        'buffer_size'   :128,
                                         'n_asics'       :16,
                                         'TE'            :5 }
                        }
@@ -74,7 +74,7 @@ class SIM_DATA(object):
 
 if __name__ == '__main__':
 
-    filename = "infinity_4mm_16_2_5_buf400"
+    filename = "temp" #"infinity_4mm_16_2_5_buf128"
     SIM=SIM_DATA(filename = "/home/viherbos/DAQ_DATA/NEUTRINOS/LESS_4mm/"+filename+".json",
                  read = False)
     SIM.config_write()

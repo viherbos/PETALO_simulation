@@ -79,6 +79,7 @@ class DAQ_IO(object):
             log_out_time  = pd.DataFrame(data = log_out_time)
             lost_data = np.array(list(logs['lost'].values())).reshape(1,-1)
             lost = pd.DataFrame(data = lost_data,columns = list(logs['lost'].keys()))
+            compress = pd.DataFrame(data = logs['compress'])
             # complevel and complib are not compatible with MATLAB
             store.put('MC',self.panel_array)
             store.put('sensors',self.sensors_array)
@@ -90,6 +91,7 @@ class DAQ_IO(object):
             store.put('in_time',log_in_time)
             store.put('out_time',log_out_time)
             store.put('lost',lost)
+            store.put('compress',compress)
             store.close()
 
 

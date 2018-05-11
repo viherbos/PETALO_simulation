@@ -351,11 +351,11 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(241).set_yscale('log')
-    fig.add_subplot(241).text(0.4,0.9,(("ASIC Input FIFO reached %.1f %%" % \
+    fig.add_subplot(241).text(0.99,0.97,(("ASIC Input FIFO reached %.1f %%" % \
                                             (WC_CH_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
-                                            horizontalalignment='left',
+                                            horizontalalignment='right',
                                             transform=fig.add_subplot(241).transAxes)
 
     fit(out['ASICS']['log_outlink'][:,0],CG['TOFPET']['OUT_FIFO_depth'])
@@ -365,11 +365,11 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(242).set_yscale('log')
-    fig.add_subplot(242).text(0.4,0.9,(("ASIC Outlink FIFO reached %.1f %%" % \
+    fig.add_subplot(242).text(0.99,0.97,(("ASIC Outlink FIFO reached %.1f %%" % \
                                             (WC_OLINK_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
-                                            horizontalalignment='left',
+                                            horizontalalignment='right',
                                             transform=fig.add_subplot(242).transAxes)
 
     fit(out['L1']['logA'][:,0],CG['L1']['FIFO_L1a_depth'])
@@ -379,11 +379,11 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(246).set_yscale('log')
-    fig.add_subplot(246).text(0.4,0.9,(("L1_A FIFO reached %.1f %%" % \
+    fig.add_subplot(246).text(0.99,0.97,(("L1_A FIFO reached %.1f %%" % \
                                             (WC_L1_A_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
-                                            horizontalalignment='left',
+                                            horizontalalignment='right',
                                             transform=fig.add_subplot(246).transAxes)
 
     fit(out['L1']['logB'][:,0],CG['L1']['FIFO_L1b_depth'])
@@ -393,11 +393,11 @@ if __name__ == '__main__':
             ylabel = "Hits",
             res = False, fit = False)
     fig.add_subplot(245).set_yscale('log')
-    fig.add_subplot(245).text(0.4,0.9,(("L1_B FIFO reached %.1f %%" % \
+    fig.add_subplot(245).text(0.99,0.97,(("L1_B FIFO reached %.1f %%" % \
                                             (WC_L1_B_FIFO))),
                                             fontsize=8,
                                             verticalalignment='top',
-                                            horizontalalignment='left',
+                                            horizontalalignment='right',
                                             transform=fig.add_subplot(245).transAxes)
     fit(latency,50)
     fit.plot(axis = fig.add_subplot(243),
@@ -405,11 +405,11 @@ if __name__ == '__main__':
             xlabel = "Latency in nanoseconds",
             ylabel = "Hits",
             res = False)
-    fig.add_subplot(243).text(0.4,0.9,(("WORST LATENCY = %d ns" % \
+    fig.add_subplot(243).text(0.99,0.8,(("WORST LATENCY = %d ns" % \
                                             (max(latency)))),
-                                            fontsize=8,
+                                            fontsize=7,
                                             verticalalignment='top',
-                                            horizontalalignment='left',
+                                            horizontalalignment='right',
                                             transform=fig.add_subplot(243).transAxes)
     new_axis = fig.add_subplot(247)
     x_data = fit.bin_centers
@@ -457,13 +457,13 @@ if __name__ == '__main__':
     new_axis_2.set_xlabel("Length of frame in QDC data")
     new_axis_2.set_ylabel("Red - Data sent (bits) / Blue - Data saved (bits)")
 
-    new_axis_2.text(0.05,0.9,(("TOTAL DATA SENT = %d bits\n" + \
+    new_axis_2.text(0.99,0.97,(("TOTAL DATA SENT = %d bits\n" + \
                              "DATA REDUCTION  = %d bits\n" + \
                              "COMPRESS RATIO = %f \n") % \
                             (np.sum(B_data),np.sum(B_save),float(np.sum(B_save))/float(np.sum(B_save)+np.sum(B_data)))),
                             fontsize=8,
                             verticalalignment='top',
-                            horizontalalignment='left',
+                            horizontalalignment='right',
                             transform=new_axis_2.transAxes)
 
 

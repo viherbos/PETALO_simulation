@@ -443,12 +443,28 @@ if __name__ == '__main__':
 
     # TOTAL NUMBER OF BITS vs COMPRESS EFFICIENCY
     A = np.arange(0,int(np.max(out['compress'])),1)
-    D = A * 26 + + 8 + 10 + 8     #see DAQ_infinity
-    B = np.multiply(D,fit.hist)
+    D_data = A * 26 + + 8 + 10 + 8     #see DAQ_infinity
+    D_save = (A-1)*10
+    B_data = np.multiply(D_data,fit.hist)
+    B_save = np.multiply(D_save,fit.hist)
+    B_save[0]=0
+    B_save[1]=0
     new_axis_2 = fig.add_subplot(248)
     x_data = fit.bin_centers
-    new_axis_2.bar(x_data,B)
+    new_axis_2.bar(x_data,B_data,color='r')
+    new_axis_2.bar(x_data,B_save,color='b')
+    new_axis_2.set_title("Data sent vs frame length")
+    new_axis_2.set_xlabel("Length of frame in QDC data")
+    new_axis_2.set_ylabel("Red - Data sent (bits) / Blue - Data saved (bits)")
 
+    new_axis_2.text(0.05,0.9,(("TOTAL DATA SENT = %d bits\n" + \
+                             "DATA REDUCTION  = %d bits\n" + \
+                             "COMPRESS RATIO = %f \n") % \
+                            (np.sum(B_data),np.sum(B_save),float(np.sum(B_save))/float(np.sum(B_save)+np.sum(B_data)))),
+                            fontsize=8,
+                            verticalalignment='top',
+                            horizontalalignment='left',
+                            transform=new_axis_2.transAxes)
 
 
     fig.tight_layout()
